@@ -1,0 +1,9 @@
+/* Tailwind CSS 基础样式、组件和实用工具指令 */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 建议在这里添加全局字体，以确保 font-inter 生效 */
+body {
+  font-family: "Inter", sans-serif;
+}

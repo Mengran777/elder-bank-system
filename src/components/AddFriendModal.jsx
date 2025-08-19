@@ -36,7 +36,7 @@ const AddFriendModal = ({
               onChange={(e) =>
                 setNewFriend({ ...newFriend, name: e.target.value })
               }
-              placeholder="Enter friend's name"
+              placeholder="Enter friend's name (for your reference)"
             />
           </div>
           <div>
@@ -44,7 +44,7 @@ const AddFriendModal = ({
               htmlFor="friendAccount"
               className="block text-gray-800 font-semibold mb-2"
             >
-              Account Number:
+              Friend's Account ID:
             </label>
             <input
               type="text"
@@ -54,7 +54,25 @@ const AddFriendModal = ({
               onChange={(e) =>
                 setNewFriend({ ...newFriend, accountNumber: e.target.value })
               }
-              placeholder="Enter friend's account number"
+              placeholder="Enter friend's unique Account ID (e.g., username)"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="friendShortCode"
+              className="block text-gray-800 font-semibold mb-2"
+            >
+              Friend's Short Code:
+            </label>
+            <input
+              type="text"
+              id="friendShortCode"
+              className="w-full p-2 border border-gray-300 rounded-lg"
+              value={newFriend.shortCode || ""}
+              onChange={(e) =>
+                setNewFriend({ ...newFriend, shortCode: e.target.value })
+              }
+              placeholder="Enter friend's bank short code"
             />
           </div>
         </div>
@@ -66,11 +84,16 @@ const AddFriendModal = ({
             Cancel
           </button>
           <button
-            onClick={onConfirm}
-            // 只有当填写了名字和账户时才启用确认按钮
-            disabled={!newFriend.name || !newFriend.accountNumber}
+            onClick={() => onConfirm(newFriend)}
+            disabled={
+              !newFriend.name ||
+              !newFriend.accountNumber ||
+              !newFriend.shortCode
+            }
             className={`px-6 py-2 bg-blue-600 text-white rounded-lg transition-colors shadow-md ${
-              !newFriend.name || !newFriend.accountNumber
+              !newFriend.name ||
+              !newFriend.accountNumber ||
+              !newFriend.shortCode
                 ? "opacity-50 cursor-not-allowed"
                 : "hover:bg-blue-700"
             }`}
@@ -83,4 +106,4 @@ const AddFriendModal = ({
   );
 };
 
-export default AddFriendModal; // <--- 确保这一行存在！
+export default AddFriendModal;

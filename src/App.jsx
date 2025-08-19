@@ -10,17 +10,16 @@ import NavigationTabs from "./components/Navigation";
 import AddCardModal from "./components/AddCardModal";
 import DeleteCardModal from "./components/DeleteCardModal";
 import AddFriendModal from "./components/AddFriendModal";
-import HelpVideoModal from "./components/HelpVideoModal"; // Changed from HelpVideoModal to HelpModal for consistency
+import HelpVideoModal from "./components/HelpVideoModal";
 import CustomerChatModal from "./components/CustomerChat";
 import axios from "axios";
-import API_BASE_URL from "./config"; // Ensure API_BASE_URL is imported from src/config.js
+import API_BASE_URL from "./config";
 
 function App() {
   // --- Global State Management ---
-  // Determine initial page based on token in localStorage
-  const [user, setUser] = useState(null); // Stores logged-in user information
-  const [token, setToken] = useState(localStorage.getItem("userToken") || null); // Stores JWT Token
-  const [currentPage, setCurrentPage] = useState(token ? "main" : "login"); // Page to display: 'login', 'signup', 'main', 'verification'
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem("userToken") || null);
+  const [currentPage, setCurrentPage] = useState(token ? "main" : "login");
 
   const [loginData, setLoginData] = useState({ account: "", password: "" });
   const [signupData, setSignupData] = useState({
@@ -33,40 +32,41 @@ function App() {
   });
   const [showPassword, setShowPassword] = useState(false);
 
-  // Card data and transaction records will now be fetched from the backend
+  // Card and transaction data will now be fetched from the backend
   const [cards, setCards] = useState([]);
   const [transactions, setTransactions] = useState([]);
-  const [friends, setFriends] = useState([]); // Friends data to be fetched from backend if API is available
+  // Friends data will now be fetched from the backend
+  const [friends, setFriends] = useState([]);
 
   const [activeTab, setActiveTab] = useState("account");
   const [showVerification, setShowVerification] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
 
-  // Card management related states
   const [showAddCard, setShowAddCard] = useState(false);
   const [showDeleteCard, setShowDeleteCard] = useState(false);
   const [deleteCardId, setDeleteCardId] = useState(null);
 
-  // Transaction filtering states
   const [dateFilter, setDateFilter] = useState("ALL");
   const [typeFilter, setTypeFilter] = useState("ALL");
 
-  // Transfer related states
   const [transferType, setTransferType] = useState("");
   const [selectedFromCard, setSelectedFromCard] = useState("");
   const [selectedToCard, setSelectedToCard] = useState("");
   const [transferAmount, setTransferAmount] = useState("");
   const [selectedFriend, setSelectedFriend] = useState("");
   const [strangerAccount, setStrangerAccount] = useState("");
+  const [recipientShortCode, setRecipientShortCode] = useState("");
   const [showAddFriend, setShowAddFriend] = useState(false);
-  const [newFriend, setNewFriend] = useState({ name: "", accountNumber: "" });
+  const [newFriend, setNewFriend] = useState({
+    name: "",
+    accountNumber: "",
+    shortCode: "",
+  });
 
-  // Security settings related states
   const [cardsLocked, setCardsLocked] = useState(false);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
 
-  // Help Center related states
   const [showHelp, setShowHelp] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [chatMessages, setChatMessages] = useState([
@@ -78,54 +78,55 @@ function App() {
   ]);
   const [chatInput, setChatInput] = useState("");
 
-  // --- Helper Function: Generic API Request Headers ---
+  // --- Helper function: Common API request headers ---
   const getAuthHeaders = () => {
     return {
       headers: {
-        Authorization: `Bearer ${token}`, // Include the JWT in the Authorization header
+        Authorization: `Bearer ${token}`,
       },
     };
   };
 
-  // --- Post-Login/Registration Handling ---
+  // --- Login/Logout handlers ---
   const handleLoginSuccess = (userData, userToken) => {
-    setUser(userData); // Set user data in state
-    setToken(userToken); // Set token in state
-    localStorage.setItem("userToken", userToken); // Store token in localStorage for persistence
-    localStorage.setItem("user", JSON.stringify(userData)); // Store user object in localStorage
-    setCurrentPage("main"); // Navigate to main application page
-    setActiveTab("account"); // Set active tab to 'account'
-    fetchCards(); // Fetch cards immediately after successful login
-    fetchTransactions(); // Fetch transactions
-    // If you have a backend API for friends, call fetchFriends() here too
+    setUser(userData);
+    setToken(userToken);
+    localStorage.setItem("userToken", userToken);
+    localStorage.setItem("user", JSON.stringify(userData));
+    setCurrentPage("main");
+    setActiveTab("account");
+    fetchCards();
+    fetchTransactions();
+    fetchFriends(); // Fetch friends after successful login
   };
 
   const handleLogout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem("userToken"); // Remove token from localStorage
-    localStorage.removeItem("user"); // Remove user data from localStorage
-    setCards([]); // Clear cards data
-    setTransactions([]); // Clear transactions data
-    setCurrentPage("login"); // Redirect to login page
+    localStorage.removeItem("userToken");
+    localStorage.removeItem("user");
+    setCards([]);
+    setTransactions([]);
+    setFriends([]); // Clear friends on logout
+    setCurrentPage("login");
   };
 
-  // --- Backend Data Fetching Functions ---
+  // --- Backend data fetching functions ---
   const fetchCards = async () => {
-    if (!token) return; // Don't fetch if no token is available
+    if (!token) return;
     try {
       const { data } = await axios.get(
         `${API_BASE_URL}/cards`,
         getAuthHeaders()
       );
-      setCards(data); // Update cards state with data from backend
+      setCards(data);
     } catch (error) {
       console.error(
         "Error fetching cards:",
         error.response ? error.response.data : error.message
       );
       if (error.response && error.response.status === 401) {
-        handleLogout(); // If token is invalid/expired, force logout
+        handleLogout();
       }
     }
   };
@@ -133,13 +134,12 @@ function App() {
   const fetchTransactions = async () => {
     if (!token) return;
     try {
-      // Pass query parameters for filtering based on current dateFilter and typeFilter
       const params = { dateFilter, typeFilter };
       const { data } = await axios.get(`${API_BASE_URL}/transactions`, {
         ...getAuthHeaders(),
         params,
       });
-      setTransactions(data); // Update transactions state with data from backend
+      setTransactions(data);
     } catch (error) {
       console.error(
         "Error fetching transactions:",
@@ -151,7 +151,27 @@ function App() {
     }
   };
 
-  // Add Card function, now making a POST request to the backend
+  // Fetch friends list from backend
+  const fetchFriends = async () => {
+    if (!token) return;
+    try {
+      const { data } = await axios.get(
+        `${API_BASE_URL}/friends`,
+        getAuthHeaders()
+      );
+      setFriends(data);
+    } catch (error) {
+      console.error(
+        "Error fetching friends:",
+        error.response ? error.response.data : error.message
+      );
+      if (error.response && error.response.status === 401) {
+        handleLogout();
+      }
+    }
+  };
+
+  // Add a new card (calls backend API)
   const addCard = async (newCardData) => {
     if (!token) return;
     try {
@@ -160,7 +180,7 @@ function App() {
         newCardData,
         getAuthHeaders()
       );
-      setCards([...cards, data]); // Add new card received from backend to local state
+      setCards([...cards, data]);
       setShowAddCard(false);
       alert("Card added successfully!");
     } catch (error) {
@@ -177,12 +197,12 @@ function App() {
     }
   };
 
-  // Delete Card function, now making a DELETE request to the backend
+  // Delete a card (calls backend API)
   const deleteCard = async (cardId) => {
     if (!token) return;
     try {
       await axios.delete(`${API_BASE_URL}/cards/${cardId}`, getAuthHeaders());
-      setCards(cards.filter((card) => card._id !== cardId)); // Filter out the deleted card (use _id from MongoDB)
+      setCards(cards.filter((card) => card._id !== cardId));
       setShowDeleteCard(false);
       setDeleteCardId(null);
       alert("Card deleted successfully!");
@@ -200,26 +220,50 @@ function App() {
     }
   };
 
-  // addFriend function (currently mocked, will need backend API integration later)
-  const addFriend = (friendData) => {
-    // This is still mocked as backend API for friends management isn't implemented yet
-    const newFriend = { ...friendData, id: friends.length + 1 };
-    setFriends([...friends, newFriend]);
-    setShowAddFriend(false);
-    alert("Friend added successfully!");
+  // Add friend (calls backend API)
+  const addFriend = async (friendData) => {
+    if (!token) return;
+    try {
+      const payload = {
+        friendIdentifier: friendData.accountNumber, // Backend will use this to find the user
+        name: friendData.name, // Frontend display or for future backend use
+        shortCode: friendData.shortCode, // Frontend display or for future backend use
+      };
+      const config = getAuthHeaders();
+      const { data } = await axios.post(
+        `${API_BASE_URL}/friends`,
+        payload,
+        config
+      );
+
+      fetchFriends(); // Refresh friends list after adding
+      setNewFriend({ name: "", accountNumber: "", shortCode: "" }); // Clear form
+      setShowAddFriend(false);
+      alert(data.message);
+    } catch (error) {
+      console.error(
+        "Error adding friend:",
+        error.response ? error.response.data : error.message
+      );
+      alert(
+        error.response && error.response.data.message
+          ? error.response.data.message
+          : "Failed to add friend."
+      );
+      if (error.response && error.response.status === 401) handleLogout();
+    }
   };
 
-  // Effect hook: Fetch data when component mounts or token/currentPage/filters change
+  // Effect hook: Fetch data on component load or token/currentPage/filter changes
   useEffect(() => {
     if (token && currentPage === "main") {
       fetchCards();
       fetchTransactions();
-      // fetchUserProfile(); // Optional: Fetch user profile data
-      // fetchFriends(); // Optional: Fetch friends data if backend API is available
+      fetchFriends();
     }
-  }, [token, currentPage, dateFilter, typeFilter]); // Re-fetch transactions when filters change
+  }, [token, currentPage, dateFilter, typeFilter]);
 
-  // Generate Random Password (remains in App.jsx as SettingsPage needs it)
+  // Generate random password (used in SettingsPage)
   const generateRandomPassword = () => {
     const chars =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -230,7 +274,7 @@ function App() {
     return password;
   };
 
-  // Send Chat Message (simulated auto-response)
+  // Send chat message (simulated auto-reply)
   const sendChatMessage = () => {
     if (chatInput.trim()) {
       const newMessages = [
@@ -254,7 +298,7 @@ function App() {
         setCurrentPage={setCurrentPage}
         loginData={loginData}
         setLoginData={setLoginData}
-        onLoginSuccess={handleLoginSuccess} // Pass success callback to LoginPage
+        onLoginSuccess={handleLoginSuccess}
       />
     );
   }
@@ -267,7 +311,6 @@ function App() {
         setSignupData={setSignupData}
         showPassword={showPassword}
         setShowPassword={setShowPassword}
-        // handleSignup logic is now handled internally by SignupPage
       />
     );
   }
@@ -280,10 +323,8 @@ function App() {
         verificationCode={verificationCode}
         setVerificationCode={setVerificationCode}
         handleVerification={() => {
-          // Verification logic, simulate login and call handleLoginSuccess if successful
-          // In a real app, this would also interact with the backend
           alert("Verification successful! You can now log in.");
-          setCurrentPage("login"); // After verification, return to login page
+          setCurrentPage("login");
           setShowVerification(false);
         }}
         setShowVerification={setShowVerification}
@@ -291,15 +332,14 @@ function App() {
     );
   }
 
-  // Main application page (after successful login)
+  // Main application page
   return (
     <div className="min-h-screen bg-gray-50 font-inter">
       <Header
         setShowHelp={setShowHelp}
         setShowChat={setShowChat}
         handleLogout={handleLogout}
-      />{" "}
-      {/* Pass handleLogout */}
+      />
       <NavigationTabs
         setCurrentPage={setCurrentPage}
         activeTab={activeTab}
@@ -308,8 +348,8 @@ function App() {
       <div className="max-w-6xl mx-auto p-6">
         {activeTab === "account" && (
           <AccountPage
-            cards={cards} // Now dynamically fetched from backend
-            transactions={transactions} // Now dynamically fetched from backend
+            cards={cards}
+            transactions={transactions}
             dateFilter={dateFilter}
             setDateFilter={setDateFilter}
             typeFilter={typeFilter}
@@ -337,11 +377,15 @@ function App() {
             setSelectedFriend={setSelectedFriend}
             strangerAccount={strangerAccount}
             setStrangerAccount={setStrangerAccount}
+            recipientShortCode={recipientShortCode}
+            setRecipientShortCode={setRecipientShortCode}
             showAddFriend={showAddFriend}
             setShowAddFriend={setShowAddFriend}
             newFriend={newFriend}
             setNewFriend={setNewFriend}
             addFriend={addFriend}
+            fetchCards={fetchCards}
+            fetchTransactions={fetchTransactions}
           />
         )}
 
@@ -359,7 +403,7 @@ function App() {
       <AddCardModal
         show={showAddCard}
         onClose={() => setShowAddCard(false)}
-        onConfirm={addCard} // Passes new card data to App.jsx's addCard function
+        onConfirm={addCard}
         currentCardCount={cards.length}
       />
       <DeleteCardModal
@@ -380,7 +424,11 @@ function App() {
         newFriend={newFriend}
         setNewFriend={setNewFriend}
       />
-      <HelpVideoModal show={showHelp} onClose={() => setShowHelp(false)} />
+      <HelpVideoModal
+        show={showHelp}
+        onClose={() => setShowHelp(false)}
+        videoContentKey={activeTab} // Pass activeTab as videoContentKey
+      />
       <CustomerChatModal
         show={showChat}
         onClose={() => setShowChat(false)}

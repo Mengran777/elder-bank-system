@@ -1,5 +1,7 @@
 import React from "react";
-import { CreditCard, Users, User, ArrowLeftRight } from "lucide-react"; // 导入转账页面所需的图标
+import { CreditCard, Users, User, ArrowLeftRight } from "lucide-react";
+import axios from "axios";
+import API_BASE_URL from "../config";
 
 const TransferPage = ({
   transferType,
@@ -17,61 +19,107 @@ const TransferPage = ({
   setSelectedFriend,
   strangerAccount,
   setStrangerAccount,
+  recipientShortCode,
+  setRecipientShortCode,
   showAddFriend,
   setShowAddFriend,
   newFriend,
   setNewFriend,
   addFriend,
+  fetchCards,
+  fetchTransactions,
 }) => {
-  // 模拟转账逻辑
-  const handleTransfer = () => {
+  const handleTransfer = async () => {
     if (!selectedFromCard || !transferAmount) {
       alert("Please select a 'From Account' and enter an amount.");
       return;
     }
 
-    // Use card._id here
-    const fromCard = cards.find((card) => card._id === selectedFromCard);
-    if (!fromCard || fromCard.balance < parseFloat(transferAmount)) {
+    const amount = parseFloat(transferAmount);
+    if (isNaN(amount) || amount <= 0) {
+      alert("Please enter a valid transfer amount.");
+      return;
+    }
+
+    const fromCardDetails = cards.find((card) => card._id === selectedFromCard);
+    if (!fromCardDetails || fromCardDetails.balance < amount) {
       alert("Insufficient balance or invalid 'From Account'.");
       return;
     }
 
-    if (transferType === "self" && !selectedToCard) {
-      alert("Please select a 'To Account'.");
-      return;
-    } else if (transferType === "friends" && !selectedFriend) {
-      alert("Please select a friend.");
-      return;
-    } else if (transferType === "others" && !strangerAccount) {
-      alert("Please enter a stranger's account number.");
+    let payload = {
+      fromCardId: selectedFromCard,
+      transferAmount: amount,
+      transferType: transferType,
+    };
+
+    if (transferType === "self") {
+      if (!selectedToCard) {
+        alert("Please select a 'To Account'.");
+        return;
+      }
+      payload.selectedToCardId = selectedToCard;
+      // 自我转账不需要 Short Code
+    } else if (transferType === "friends") {
+      if (!selectedFriend) {
+        alert("Please select a friend.");
+        return;
+      }
+      payload.selectedFriendId = selectedFriend;
+      // 朋友转账，Short Code 不再是必填项，也不会从前端发送
+      // 后端将根据朋友的用户ID查找Short Code
+    } else if (transferType === "others") {
+      if (!strangerAccount || !recipientShortCode) {
+        alert("Please enter recipient's account number and short code.");
+        return;
+      }
+      payload.strangerAccount = strangerAccount;
+      payload.recipientShortCode = recipientShortCode; // 陌生人转账 Short Code 必填
+    } else {
+      alert("Please select a transfer type.");
       return;
     }
 
-    // 这里可以添加更复杂的转账逻辑，例如更新卡的余额
-    alert(
-      `Transfer of $${parseFloat(transferAmount).toFixed(
-        2
-      )} successful from Account ${fromCard.accountNumber}!`
-    );
-    // 实际应用中会更新cards state
-    // const updatedCards = cards.map(card => {
-    //   if (card._id === selectedFromCard) { // Use _id
-    //     return { ...card, balance: card.balance - parseFloat(transferAmount) };
-    //   }
-    //   if (transferType === 'self' && card._id === selectedToCard) { // Use _id
-    //     return { ...card, balance: card.balance + parseFloat(transferAmount) };
-    //   }
-    //   return card;
-    // });
-    // setCards(updatedCards);
+    try {
+      const token = localStorage.getItem("userToken");
+      const config = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      };
 
-    // 重置转账表单
-    setSelectedFromCard("");
-    setSelectedToCard("");
-    setTransferAmount("");
-    setSelectedFriend("");
-    setStrangerAccount("");
+      const response = await axios.post(
+        `${API_BASE_URL}/transactions/transfer`,
+        payload,
+        config
+      );
+
+      alert(response.data.message);
+
+      // Refresh cards and transactions after successful transfer
+      fetchCards();
+      fetchTransactions();
+
+      // Reset transfer form
+      setSelectedFromCard("");
+      setSelectedToCard("");
+      setTransferAmount("");
+      setSelectedFriend("");
+      setStrangerAccount("");
+      setRecipientShortCode(""); // 重置 Short Code
+      setTransferType(""); // Reset transfer type to clear the form
+    } catch (error) {
+      console.error(
+        "Transfer failed:",
+        error.response ? error.response.data : error.message
+      );
+      alert(
+        error.response && error.response.data.message
+          ? error.response.data.message
+          : "Transfer failed. Please try again."
+      );
+    }
   };
 
   return (
@@ -90,7 +138,10 @@ const TransferPage = ({
 
         <div className="space-y-4">
           <button
-            onClick={() => setTransferType("self")}
+            onClick={() => {
+              setTransferType("self");
+              setRecipientShortCode("");
+            }}
             className={`w-full p-4 rounded-lg border-2 text-left flex items-center space-x-3 transition-colors shadow-sm ${
               transferType === "self"
                 ? "border-blue-600 bg-blue-50"
@@ -102,7 +153,10 @@ const TransferPage = ({
           </button>
 
           <button
-            onClick={() => setTransferType("friends")}
+            onClick={() => {
+              setTransferType("friends");
+              setRecipientShortCode("");
+            }}
             className={`w-full p-4 rounded-lg border-2 text-left flex items-center space-x-3 transition-colors shadow-sm ${
               transferType === "friends"
                 ? "border-blue-600 bg-blue-50"
@@ -114,7 +168,10 @@ const TransferPage = ({
           </button>
 
           <button
-            onClick={() => setTransferType("others")}
+            onClick={() => {
+              setTransferType("others");
+              setRecipientShortCode("");
+            }}
             className={`w-full p-4 rounded-lg border-2 text-left flex items-center space-x-3 transition-colors shadow-sm ${
               transferType === "others"
                 ? "border-blue-600 bg-blue-50"
@@ -145,9 +202,7 @@ const TransferPage = ({
                   <option value="">Select card</option>
                   {cards.map((card) => (
                     <option key={card._id} value={card._id}>
-                      {" "}
-                      {/* Use card._id */}
-                      Account {card.accountNumber} - $
+                      Account {card.accountNumber} - £
                       {card.balance.toLocaleString()}
                     </option>
                   ))}
@@ -164,12 +219,10 @@ const TransferPage = ({
                 >
                   <option value="">Select card</option>
                   {cards
-                    .filter((card) => card._id !== selectedFromCard) // Use card._id
+                    .filter((card) => card._id !== selectedFromCard)
                     .map((card) => (
                       <option key={card._id} value={card._id}>
-                        {" "}
-                        {/* Use card._id */}
-                        Account {card.accountNumber} - $
+                        Account {card.accountNumber} - £
                         {card.balance.toLocaleString()}
                       </option>
                     ))}
@@ -224,9 +277,7 @@ const TransferPage = ({
                   <option value="">Select your card</option>
                   {cards.map((card) => (
                     <option key={card._id} value={card._id}>
-                      {" "}
-                      {/* Use card._id */}
-                      Account {card.accountNumber} - $
+                      Account {card.accountNumber} - £
                       {card.balance.toLocaleString()}
                     </option>
                   ))}
@@ -243,12 +294,13 @@ const TransferPage = ({
                 >
                   <option value="">Select friend</option>
                   {friends.map((friend) => (
-                    <option key={friend.id} value={friend.id}>
+                    <option key={friend._id} value={friend._id}>
                       {friend.name} - {friend.accountNumber}
                     </option>
                   ))}
                 </select>
               </div>
+              {/* Short Code Field for Friends (已移除，后端将从朋友的用户信息中获取) */}
             </div>
             <div className="mt-4">
               <label className="block font-semibold text-gray-800 mb-2">
@@ -290,9 +342,7 @@ const TransferPage = ({
                   <option value="">Select your card</option>
                   {cards.map((card) => (
                     <option key={card._id} value={card._id}>
-                      {" "}
-                      {/* Use card._id */}
-                      Account {card.accountNumber} - $
+                      Account {card.accountNumber} - £
                       {card.balance.toLocaleString()}
                     </option>
                   ))}
@@ -308,6 +358,18 @@ const TransferPage = ({
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={strangerAccount}
                   onChange={(e) => setStrangerAccount(e.target.value)}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block font-semibold text-gray-800 mb-2">
+                  Recipient Short Code
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter recipient's short code"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={recipientShortCode}
+                  onChange={(e) => setRecipientShortCode(e.target.value)}
                 />
               </div>
             </div>

@@ -5,6 +5,7 @@ import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import cardRoutes from "./routes/cardRoutes.js";
 import transactionRoutes from "./routes/transactionRoutes.js";
+import friendRoutes from "./routes/friendRoutes.js"; // 导入朋友路由
 
 dotenv.config(); // Load environment variables
 
@@ -33,6 +34,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/cards", cardRoutes);
 app.use("/api/transactions", transactionRoutes);
+app.use("/api/friends", friendRoutes); // 使用朋友路由
 
 // Basic root route
 app.get("/", (req, res) => {

@@ -3,14 +3,14 @@ import {
   getTransactions,
   createTransfer,
 } from "../controllers/transactionController.js";
-import { protect } from "../middleware/authMiddleware.js"; // <--- 🌟 确保路径和文件名正确无误
+import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// 交易记录获取
-router.route("/").get(protect, getTransactions); // 获取用户交易记录
+// 获取所有交易记录 (需要认证)
+router.route("/").get(protect, getTransactions);
 
-// 转账操作
-router.route("/transfer").post(protect, createTransfer); // 执行转账
+// 创建转账 (需要认证)
+router.route("/transfer").post(protect, createTransfer);
 
 export default router;

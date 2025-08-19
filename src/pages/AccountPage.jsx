@@ -47,23 +47,25 @@ const AccountPage = ({
         {/* Cards Display */}
         <div className="space-y-4 mb-8">
           {cards.length > 0 ? (
-            cards.map((card, index) => (
+            // 🌟 使用 card._id 作为 key，并显示 account Number
+            cards.map((card) => (
               <div
-                key={card.id}
+                key={card._id}
                 className="border rounded-lg p-4 bg-gray-50 shadow-sm"
               >
                 <div className="flex items-center mb-2">
                   <CreditCard className="text-blue-600 mr-2" size={20} />
                   <span className="font-semibold text-blue-900">
-                    Account {index + 1}
-                  </span>
+                    Account {card.accountNumber}
+                  </span>{" "}
+                  {/* 显示 account number */}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-blue-600 text-white p-4 rounded-lg shadow-inner">
                     <div className="mb-2">
                       <span className="text-sm opacity-80">Balance</span>
                       <div className="text-2xl font-bold">
-                        $
+                        £
                         {card.balance.toLocaleString(undefined, {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
@@ -204,20 +206,25 @@ const AccountPage = ({
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {transactions.length > 0 ? (
-                  transactions.map((transaction, index) => (
+                  // 🌟 使用 transaction._id 作为 key，并调整日期和类型显示
+                  transactions.map((transaction) => (
                     <tr
-                      key={index}
+                      key={transaction._id}
                       className="hover:bg-gray-50 transition-colors"
                     >
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {transaction.date}
-                      </td>
+                        {new Date(transaction.createdAt).toLocaleDateString()}
+                      </td>{" "}
+                      {/* 使用 createdAt 并格式化 */}
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {transaction.description}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {transaction.type}
-                      </td>
+                        {transaction.type === "credit"
+                          ? "Money-in"
+                          : "Money-out"}
+                      </td>{" "}
+                      {/* 根据 type 显示 */}
                       <td
                         className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${
                           transaction.amount > 0
@@ -225,7 +232,7 @@ const AccountPage = ({
                             : "text-red-600"
                         }`}
                       >
-                        {transaction.amount > 0 ? "+" : ""}$
+                        {transaction.amount > 0 ? "+" : ""}£
                         {Math.abs(transaction.amount).toFixed(2)}
                       </td>
                     </tr>

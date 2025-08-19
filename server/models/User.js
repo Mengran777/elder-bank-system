@@ -8,6 +8,7 @@ const userSchema = mongoose.Schema(
       required: true,
     },
     accountId: {
+      // This could be the bank account ID, unique for login
       type: String,
       required: true,
       unique: true,
@@ -24,14 +25,26 @@ const userSchema = mongoose.Schema(
     phone: {
       type: String,
       required: true,
-      unique: true,
     },
+    isAdmin: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
+    // New field for friends list
+    friends: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User", // Reference to the User model itself
+      },
+    ],
   },
   {
     timestamps: true,
   }
 );
 
+// Hash password before saving
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     next();
@@ -40,6 +53,7 @@ userSchema.pre("save", async function (next) {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
+// Match user entered password to hashed password in database
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };

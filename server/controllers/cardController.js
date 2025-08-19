@@ -47,7 +47,7 @@ const addCard = async (req, res) => {
     expires: expiresEnd,
     type,
     // pin 不应直接存储，这里只是示例，实际应处理成验证逻辑
-    // balance 默认 0
+    balance: Math.floor(Math.random() * 100000) + 1,
   });
 
   if (card) {

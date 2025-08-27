@@ -1,5 +1,7 @@
 import React from "react";
 import { Lock, Unlock, Eye, EyeOff } from "lucide-react"; // 导入设置页面所需的图标
+import axios from "axios"; // 导入 axios
+import API_BASE_URL from "../config"; // 导入后端 API 基础 URL
 
 const SettingsPage = ({
   cardsLocked,
@@ -14,8 +16,14 @@ const SettingsPage = ({
   const [confirmNewPassword, setConfirmNewPassword] = React.useState("");
   const [tempShowNewPassword, setTempShowNewPassword] = React.useState(false); // 用于新密码显示/隐藏
 
-  const handleChangePassword = () => {
-    // 实际应用中会验证当前密码，并进行后端更新
+  // 处理密码修改
+  const handleChangePassword = async () => {
+    // ✨ 变为异步函数
+    // 1. 前端验证
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      alert("Please fill in all password fields.");
+      return;
+    }
     if (newPassword.length < 10) {
       alert("New password must be at least 10 characters long.");
       return;
@@ -28,13 +36,51 @@ const SettingsPage = ({
       alert("New password cannot be the same as the current password.");
       return;
     }
-    // 模拟密码修改成功
-    alert("Password changed successfully!");
-    // 重置密码输入框
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmNewPassword("");
-    setShowPasswordChange(false);
+
+    // 2. 调用后端 API
+    try {
+      const token = localStorage.getItem("userToken"); // 获取 JWT token
+      if (!token) {
+        alert("Authentication token not found. Please log in again.");
+        // 可以选择跳转到登录页
+        // history.push('/login');
+        return;
+      }
+
+      const config = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // 在请求头中发送 token
+        },
+      };
+
+      const response = await axios.put(
+        `${API_BASE_URL}/users/profile/password`, // 后端密码修改路由
+        { currentPassword, newPassword, confirmNewPassword },
+        config
+      );
+
+      // 3. 处理后端响应
+      alert(response.data.message); // 显示后端返回的成功消息
+
+      // 4. 重置密码输入框和隐藏表单
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+      setTempShowNewPassword(false); // 隐藏新密码
+      setShowPasswordChange(false); // 隐藏密码修改表单
+    } catch (error) {
+      // 5. 处理错误
+      console.error(
+        "Password change failed:",
+        error.response ? error.response.data : error.message
+      );
+      alert(
+        error.response && error.response.data.message
+          ? error.response.data.message
+          : "Password change failed. Please try again."
+      );
+    }
   };
 
   const handleGenerateAndSetPassword = () => {

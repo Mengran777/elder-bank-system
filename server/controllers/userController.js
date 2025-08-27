@@ -5,7 +5,6 @@ import bcrypt from "bcryptjs";
 // @route   GET /api/users/profile
 // @access  Private
 const getUserProfile = async (req, res) => {
-  // req.user 由 authMiddleware 提供，包含已认证的用户信息
   const user = await User.findById(req.user._id).select("-password");
 
   if (user) {
@@ -33,13 +32,13 @@ const updateUserPassword = async (req, res) => {
     return;
   }
 
-  // 验证当前密码
+  // 1. 验证当前密码是否正确
   if (!(await user.matchPassword(currentPassword))) {
     res.status(401).json({ message: "Current password is incorrect" });
     return;
   }
 
-  // 验证新密码是否符合要求
+  // 2. 验证新密码是否符合要求
   if (newPassword.length < 10) {
     res
       .status(400)
@@ -59,12 +58,25 @@ const updateUserPassword = async (req, res) => {
     return;
   }
 
-  // 更新密码
-  const salt = await bcrypt.genSalt(10);
-  user.password = await bcrypt.hash(newPassword, salt);
-  await user.save();
+  // 关键：将明文新密码赋值给 user.password
+  user.password = newPassword;
 
-  res.json({ message: "Password updated successfully" });
+  // ✨ 新增调试日志：在保存前检查 password 字段是否被 Mongoose 标记为修改
+  console.log(
+    'Controller: user.isModified("password") before save:',
+    user.isModified("password")
+  );
+
+  try {
+    // 3. 保存用户，这将触发 pre('save') 钩子来哈希密码
+    await user.save();
+    res.json({ message: "Password updated successfully" });
+  } catch (error) {
+    console.error("Error saving user after password update:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to update password due to a server error." });
+  }
 };
 
 export { getUserProfile, updateUserPassword };

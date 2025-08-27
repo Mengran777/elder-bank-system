@@ -7,11 +7,11 @@ const AddCardModal = ({ show, onClose, onConfirm }) => {
     accountNumber: "",
     cardId: "", // This will be the 16-digit card number sent to backend as 'number'
     shortCode: "",
-    name: "", // Card Holder Name
-    openingBank: "",
+    name: "", // Card Holder Name (maps to 'holder' in backend)
+    openingBank: "", // (maps to 'bank' in backend)
     pin: "", // PIN for the card (should not be stored directly in backend without encryption)
     type: "debit", // Default card type
-    expires: "", // Changed from expiresEnd to expires for consistency with backend model
+    expires: "", // 统一字段名 expires
   });
 
   // Effect hook to reset form state when the modal is shown
@@ -27,7 +27,7 @@ const AddCardModal = ({ show, onClose, onConfirm }) => {
         openingBank: "",
         pin: "",
         type: "debit",
-        expires: "",
+        expires: "", // 重置时统一使用 'expires'
       });
     }
   }, [show]); // Run this effect only when 'show' prop changes
@@ -43,33 +43,50 @@ const AddCardModal = ({ show, onClose, onConfirm }) => {
 
   // Handle confirmation of adding a new card
   const handleConfirm = () => {
-    // Simple form validation
-    if (
-      !newCard.accountNumber ||
-      !newCard.cardId ||
-      !newCard.shortCode ||
-      !newCard.name ||
-      !newCard.openingBank ||
-      !newCard.pin ||
-      !newCard.expires
-    ) {
-      alert("Please fill in all the card details.");
+    const trimmedCard = {
+      ...newCard,
+      accountNumber: newCard.accountNumber.trim(),
+      cardId: newCard.cardId.trim(),
+      shortCode: newCard.shortCode.trim(),
+      name: newCard.name.trim(),
+      openingBank: newCard.openingBank.trim(),
+      pin: newCard.pin.trim(),
+      expires: newCard.expires.trim(),
+    };
+
+    let errorMessage = "";
+
+    // ✨ 修改：再次添加前端的必填字段验证，确保用户明确知道哪些字段是必需的
+    if (!trimmedCard.accountNumber)
+      errorMessage += "Account Number is required.\n";
+    if (!trimmedCard.cardId) errorMessage += "Card Number is required.\n";
+    if (!trimmedCard.shortCode) errorMessage += "Short Code is required.\n";
+    if (!trimmedCard.name) errorMessage += "Card Holder Name is required.\n";
+    if (!trimmedCard.openingBank) errorMessage += "Opening Bank is required.\n";
+    if (!trimmedCard.pin) errorMessage += "PIN is required.\n";
+    if (!trimmedCard.expires) errorMessage += "Expires End is required.\n";
+
+    // 如果有任何必填字段缺失，显示错误并返回
+    if (errorMessage) {
+      alert("Please fill in all the card details:\n" + errorMessage);
       return;
     }
-    // Card Number validation removed as per user request
 
     // PIN validation format remains 3 digits
-    if (!/^\d{3}$/.test(newCard.pin)) {
+    if (!/^\d{3}$/.test(trimmedCard.pin)) {
       alert("PIN must be 3 digits.");
       return;
     }
     // Validate expiration date format MM/YY
-    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(newCard.expires)) {
+    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(trimmedCard.expires)) {
       alert("Expires End must be in MM/YY format (e.g., 01/25).");
       return;
     }
 
-    onConfirm(newCard); // Call the parent component's onConfirm method, passing the new card data
+    // ✨ 新增：在发送之前打印 trimmedCard 对象，用于调试
+    console.log("Submitting new card data:", trimmedCard);
+
+    onConfirm(trimmedCard); // Call the parent component's onConfirm method, passing the new card data
     // The App.jsx's onConfirm (addCard) will handle closing the modal and refreshing data.
   };
 
@@ -177,7 +194,6 @@ const AddCardModal = ({ show, onClose, onConfirm }) => {
                 className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={newCard.cardId}
                 onChange={handleInputChange}
-                // maxLength removed as per user request
                 placeholder="e.g., 1234567890123456"
               />
             </div>
@@ -195,7 +211,7 @@ const AddCardModal = ({ show, onClose, onConfirm }) => {
                 className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={newCard.name}
                 onChange={handleInputChange}
-                placeholder="e.g.,  TAI"
+                placeholder="e.g., YAI TAI"
               />
             </div>
             <div>

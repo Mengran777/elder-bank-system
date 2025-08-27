@@ -1,5 +1,5 @@
 import React from "react";
-import { X } from "lucide-react"; // Import close icon for the modal
+import { X } from "lucide-react"; // 导入模态框关闭图标
 
 const AddFriendModal = ({
   show,
@@ -8,7 +8,30 @@ const AddFriendModal = ({
   newFriend,
   setNewFriend,
 }) => {
-  if (!show) return null; // Do not render if 'show' is false
+  if (!show) return null;
+
+  // 处理确认添加朋友
+  const handleConfirmAddFriend = () => {
+    // 对所有字段进行 trim() 和非空验证
+    const trimmedFriend = {
+      ...newFriend,
+      name: newFriend.name.trim(),
+      accountNumber: newFriend.accountNumber.trim(),
+      shortCode: newFriend.shortCode.trim(), // 确保 trim shortCode
+    };
+
+    // ✨ 修改：添加 shortCode 的验证
+    if (
+      !trimmedFriend.name ||
+      !trimmedFriend.accountNumber ||
+      !trimmedFriend.shortCode
+    ) {
+      alert("Please enter friend's name, account number, and short code.");
+      return;
+    }
+
+    onConfirm(trimmedFriend); // 传递经过修剪的朋友数据
+  };
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4">
@@ -57,6 +80,25 @@ const AddFriendModal = ({
               placeholder="Enter friend's account number"
             />
           </div>
+          {/* ✨ 新增：Short Code 输入字段 */}
+          <div>
+            <label
+              htmlFor="friendShortCode"
+              className="block text-gray-800 font-semibold mb-2"
+            >
+              Short Code:
+            </label>
+            <input
+              type="text"
+              id="friendShortCode"
+              className="w-full p-2 border border-gray-300 rounded-lg"
+              value={newFriend.shortCode}
+              onChange={(e) =>
+                setNewFriend({ ...newFriend, shortCode: e.target.value })
+              }
+              placeholder="Enter friend's short code (e.g., 11-22-33)"
+            />
+          </div>
         </div>
         <div className="flex justify-end space-x-4">
           <button
@@ -66,10 +108,17 @@ const AddFriendModal = ({
             Cancel
           </button>
           <button
-            onClick={() => onConfirm(newFriend)} // Call onConfirm and pass the newFriend data
-            disabled={!newFriend.name || !newFriend.accountNumber} // Disable if name or account number is empty
+            onClick={handleConfirmAddFriend}
+            // ✨ 修改：只有当填写了名字、账户和 Short Code 时才启用确认按钮
+            disabled={
+              !newFriend.name ||
+              !newFriend.accountNumber ||
+              !newFriend.shortCode
+            }
             className={`px-6 py-2 bg-blue-600 text-white rounded-lg transition-colors shadow-md ${
-              !newFriend.name || !newFriend.accountNumber
+              !newFriend.name ||
+              !newFriend.accountNumber ||
+              !newFriend.shortCode
                 ? "opacity-50 cursor-not-allowed"
                 : "hover:bg-blue-700"
             }`}

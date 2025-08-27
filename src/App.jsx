@@ -32,11 +32,9 @@ function App() {
   });
   const [showPassword, setShowPassword] = useState(false);
 
-  // Card and transaction data will now be fetched from the backend
   const [cards, setCards] = useState([]);
   const [transactions, setTransactions] = useState([]);
-  // Friends data will now be fetched from the backend
-  const [friends, setFriends] = useState([]);
+  const [friends, setFriends] = useState([]); // Friends data now fetched from backend
 
   const [activeTab, setActiveTab] = useState("account");
   const [showVerification, setShowVerification] = useState(false);
@@ -45,7 +43,6 @@ function App() {
 
   const [showAddCard, setShowAddCard] = useState(false);
   const [showDeleteCard, setShowDeleteCard] = useState(false);
-  // deleteCardId 应该是一个字符串，因为它将是 MongoDB 的 _id
   const [deleteCardId, setDeleteCardId] = useState(null);
 
   const [dateFilter, setDateFilter] = useState("ALL");
@@ -59,7 +56,6 @@ function App() {
   const [strangerAccount, setStrangerAccount] = useState("");
   const [recipientShortCode, setRecipientShortCode] = useState("");
   const [showAddFriend, setShowAddFriend] = useState(false);
-  // newFriend 的 shortCode 字段是必需的，因为后端 Friends 模型可能需要它
   const [newFriend, setNewFriend] = useState({
     name: "",
     accountNumber: "",
@@ -80,7 +76,7 @@ function App() {
   ]);
   const [chatInput, setChatInput] = useState("");
 
-  // --- Helper function: Common API request headers ---
+  // Helper function: Common API request headers
   const getAuthHeaders = () => {
     return {
       headers: {
@@ -121,15 +117,7 @@ function App() {
         `${API_BASE_URL}/cards`,
         getAuthHeaders()
       );
-      // 确保卡片数据至少包含一个 number 字段 (这里使用 cardId 作为 number 的值)
-      // 如果后端返回的字段名是 number, 那么这一步可以省略
-      const formattedCards = data.map((card) => ({
-        ...card,
-        // 假设后端返回的 cardId 实际上是完整的卡号
-        // 或者如果后端有 'number' 字段，就直接用 'number'
-        number: card.number || card.cardId, // 统一使用 'number' 字段
-      }));
-      setCards(formattedCards);
+      setCards(data);
     } catch (error) {
       console.error(
         "Error fetching cards:",
@@ -181,32 +169,20 @@ function App() {
     }
   };
 
-  // Add a new card (calls backend API) - ✨ 关键修改 ✨
+  // Add a new card (calls backend API)
   const addCard = async (newCardData) => {
     if (!token) return;
     try {
-      // 构造发送到后端的数据，确保字段名与后端模型 (server/models/Card.js) 匹配
-      const payload = {
-        type: newCardData.type,
-        balance: 0, // 新卡初始余额设为0或根据后端逻辑处理
-        holder: newCardData.name,
-        number: newCardData.cardId, // 将前端 AddCardModal 的 cardId 映射到后端 Card 模型的 number 字段
-        expires: newCardData.expires, // 映射 expiresEnd 到 expires
-        accountNumber: newCardData.accountNumber,
-        shortCode: newCardData.shortCode,
-        bank: newCardData.openingBank,
-        // pin 不应该直接发送到后端或需要加密处理
-      };
-
+      // payload will be newCardData directly as fields are now unified
       const { data } = await axios.post(
         `${API_BASE_URL}/cards`,
-        payload,
+        newCardData,
         getAuthHeaders()
       );
-      // setCards([...cards, data]); // 直接添加后端返回的新卡，它应该包含 _id 和正确的 number 字段
+      setCards([...cards, data]); // Add new card to state
       setShowAddCard(false);
       alert("Card added successfully!");
-      fetchCards(); // 刷新卡片列表以获取最新数据，包括正确的 number 字段
+      fetchCards(); // Refresh cards list to get latest data
     } catch (error) {
       console.error(
         "Error adding card:",
@@ -221,16 +197,16 @@ function App() {
     }
   };
 
-  // Delete a card (calls backend API) - ✨ 关键修改 ✨
+  // Delete a card (calls backend API)
   const deleteCard = async (cardId) => {
     if (!token) return;
     try {
       await axios.delete(`${API_BASE_URL}/cards/${cardId}`, getAuthHeaders());
-      // setCards(cards.filter((card) => card._id !== cardId)); // 过滤本地状态，或直接重新获取
+      setCards(cards.filter((card) => card._id !== cardId)); // Filter out deleted card
       setShowDeleteCard(false);
       setDeleteCardId(null);
       alert("Card deleted successfully!");
-      fetchCards(); // 刷新卡片列表以获取最新数据
+      fetchCards(); // Refresh cards list to get latest data
     } catch (error) {
       console.error(
         "Error deleting card:",
@@ -249,18 +225,11 @@ function App() {
   const addFriend = async (friendData) => {
     if (!token) return;
     try {
-      const payload = {
-        friendIdentifier: friendData.accountNumber, // Backend will use this to find the user
-        name: friendData.name, // Frontend display or for future backend use
-        shortCode: friendData.shortCode, // Add shortCode to payload if your backend needs it
-      };
-      const config = getAuthHeaders();
       const { data } = await axios.post(
         `${API_BASE_URL}/friends`,
-        payload,
-        config
+        friendData,
+        getAuthHeaders()
       );
-
       fetchFriends(); // Refresh friends list after adding
       setNewFriend({ name: "", accountNumber: "", shortCode: "" }); // Clear form
       setShowAddFriend(false);
@@ -284,7 +253,7 @@ function App() {
     if (token && currentPage === "main") {
       fetchCards();
       fetchTransactions();
-      fetchFriends();
+      fetchFriends(); // Fetch friends data when main page is active
     }
   }, [token, currentPage, dateFilter, typeFilter]);
 
@@ -336,7 +305,6 @@ function App() {
         setSignupData={setSignupData}
         showPassword={showPassword}
         setShowPassword={setShowPassword}
-        // handleSignup logic is now handled internally by SignupPage
       />
     );
   }
@@ -402,7 +370,7 @@ function App() {
                 (typeFilter === "Money-out" && transaction.amount < 0);
 
               return dateMatch && typeMatch;
-            })} // 过滤交易记录
+            })} // Filter transactions
             dateFilter={dateFilter}
             setDateFilter={setDateFilter}
             typeFilter={typeFilter}
@@ -410,8 +378,8 @@ function App() {
             setShowAddCard={setShowAddCard}
             setShowDeleteCard={setShowDeleteCard}
             setDeleteCardId={setDeleteCardId}
-            fetchCards={fetchCards} // 传递 fetch 函数以便 AccountPage 可以触发刷新
-            fetchTransactions={fetchTransactions} // 传递 fetch 函数
+            fetchCards={fetchCards} // Pass fetch function so AccountPage can trigger refresh
+            fetchTransactions={fetchTransactions} // Pass fetch function
           />
         )}
 
@@ -421,7 +389,7 @@ function App() {
             setTransferType={setTransferType}
             cards={cards}
             friends={friends}
-            // setFriends={setFriends} // setFriends 可能不需要在这里传递，因为 addFriend 已经通过 prop 传递
+            setFriends={setFriends} // Keeping for now, might be needed if TransferPage manages friend state directly for some reason
             selectedFromCard={selectedFromCard}
             setSelectedFromCard={setSelectedFromCard}
             selectedToCard={selectedToCard}
@@ -438,9 +406,10 @@ function App() {
             setShowAddFriend={setShowAddFriend}
             newFriend={newFriend}
             setNewFriend={setNewFriend}
-            addFriend={addFriend} // 传递 addFriend 函数
-            fetchCards={fetchCards} // 传递 fetch 函数
-            fetchTransactions={fetchTransactions} // 传递 fetch 函数
+            addFriend={addFriend}
+            fetchCards={fetchCards} // Pass fetch functions to TransferPage
+            fetchTransactions={fetchTransactions}
+            fetchFriends={fetchFriends} // Pass fetchFriends to TransferPage
           />
         )}
 
@@ -454,11 +423,11 @@ function App() {
           />
         )}
       </div>
-      {/* 模态框统一在此处渲染 */}
+      {/* Modals rendered here */}
       <AddCardModal
         show={showAddCard}
         onClose={() => setShowAddCard(false)}
-        onConfirm={addCard} // 传递 addCard 函数
+        onConfirm={addCard}
         currentCardCount={cards.length}
       />
       <DeleteCardModal
@@ -467,7 +436,7 @@ function App() {
           setShowDeleteCard(false);
           setDeleteCardId(null);
         }}
-        onConfirm={() => deleteCard(deleteCardId)} // 传递 deleteCard 函数
+        onConfirm={() => deleteCard(deleteCardId)}
         cards={cards}
         setDeleteCardId={setDeleteCardId}
         deleteCardId={deleteCardId}

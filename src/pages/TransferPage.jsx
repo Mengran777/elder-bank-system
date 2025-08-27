@@ -8,7 +8,7 @@ const TransferPage = ({
   setTransferType,
   cards,
   friends,
-  setFriends,
+  // setFriends, // 考虑到 addFriend 在 App.jsx 中处理了状态更新，这里可能不需要
   selectedFromCard,
   setSelectedFromCard,
   selectedToCard,
@@ -25,9 +25,9 @@ const TransferPage = ({
   setShowAddFriend,
   newFriend,
   setNewFriend,
-  addFriend,
-  fetchCards,
-  fetchTransactions,
+  addFriend, // 传递 addFriend 函数
+  fetchCards, // 传递获取函数以便在操作后刷新数据
+  fetchTransactions, // 传递获取函数以便在操作后刷新数据
 }) => {
   const handleTransfer = async () => {
     if (!selectedFromCard || !transferAmount) {
@@ -59,15 +59,13 @@ const TransferPage = ({
         return;
       }
       payload.selectedToCardId = selectedToCard;
-      // 自我转账不需要 Short Code
     } else if (transferType === "friends") {
       if (!selectedFriend) {
         alert("Please select a friend.");
         return;
       }
       payload.selectedFriendId = selectedFriend;
-      // 朋友转账，Short Code 不再是必填项，也不会从前端发送
-      // 后端将根据朋友的用户ID查找Short Code
+      // 朋友转账，后端将从朋友的用户信息中获取 Short Code，前端无需发送
     } else if (transferType === "others") {
       if (!strangerAccount || !recipientShortCode) {
         alert("Please enter recipient's account number and short code.");
@@ -97,18 +95,18 @@ const TransferPage = ({
 
       alert(response.data.message);
 
-      // Refresh cards and transactions after successful transfer
+      // 转账成功后刷新卡片和交易记录
       fetchCards();
       fetchTransactions();
 
-      // Reset transfer form
+      // 重置转账表单
       setSelectedFromCard("");
       setSelectedToCard("");
       setTransferAmount("");
       setSelectedFriend("");
       setStrangerAccount("");
-      setRecipientShortCode(""); // 重置 Short Code
-      setTransferType(""); // Reset transfer type to clear the form
+      setRecipientShortCode("");
+      setTransferType("");
     } catch (error) {
       console.error(
         "Transfer failed:",
@@ -183,7 +181,7 @@ const TransferPage = ({
           </button>
         </div>
 
-        {/* Transfer Forms */}
+        {/* 转账表单 */}
         {transferType === "self" && (
           <div className="mt-6 p-4 border-t border-gray-200 pt-6">
             <h4 className="font-semibold text-blue-900 mb-4">
@@ -300,7 +298,6 @@ const TransferPage = ({
                   ))}
                 </select>
               </div>
-              {/* Short Code Field for Friends (已移除，后端将从朋友的用户信息中获取) */}
             </div>
             <div className="mt-4">
               <label className="block font-semibold text-gray-800 mb-2">

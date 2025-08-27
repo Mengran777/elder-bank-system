@@ -1,39 +1,13 @@
-import React, { useState } from "react";
+import React from "react";
 import { User } from "lucide-react";
-import axios from "axios"; // Ensure axios is imported
-import API_BASE_URL from "../config"; // Path for src/pages/ -> src/config.js is ../config
+import { useNavigate } from "react-router-dom"; // 导入 useNavigate
 
-const LoginPage = ({
-  setCurrentPage,
-  loginData,
-  setLoginData,
-  handleLogin,
-}) => {
-  const handleLoginSubmit = async () => {
-    try {
-      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
-        accountId: loginData.account,
-        password: loginData.password,
-      });
+const LoginPage = ({ loginData, setLoginData, handleLogin }) => {
+  // 移除 setCurrentPage prop
+  const navigate = useNavigate(); // 获取 navigate 函数
 
-      if (response.data && response.data.token) {
-        localStorage.setItem("userToken", response.data.token);
-        localStorage.setItem("userAccountName", response.data.accountName);
-
-        setCurrentPage("main");
-        console.log("Login successful:", response.data);
-      }
-    } catch (error) {
-      console.error(
-        "Login failed:",
-        error.response ? error.response.data : error.message
-      );
-      alert(
-        error.response && error.response.data.message
-          ? error.response.data.message
-          : "Login failed. Please check your credentials."
-      );
-    }
+  const handleLoginClick = () => {
+    handleLogin(); // 调用 App.jsx 传递下来的登录处理函数
   };
 
   return (
@@ -47,8 +21,10 @@ const LoginPage = ({
             Or{" "}
             <span
               className="font-medium text-blue-600 hover:text-blue-500 cursor-pointer"
-              onClick={() => setCurrentPage("signup")}
+              onClick={() => navigate("/signup")}
             >
+              {" "}
+              {/* 使用 navigate 跳转到注册页 */}
               create a new account
             </span>
           </p>
@@ -94,7 +70,7 @@ const LoginPage = ({
           <div>
             <button
               type="submit"
-              onClick={handleLoginSubmit}
+              onClick={handleLoginClick} // 调用处理函数
               className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-lg font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-md"
             >
               <span className="absolute left-0 inset-y-0 flex items-center pl-3">
@@ -108,7 +84,7 @@ const LoginPage = ({
           </div>
           <div className="text-center">
             <button
-              onClick={() => setCurrentPage("signup")}
+              onClick={() => navigate("/signup")} // 使用 navigate 跳转到注册页
               className="w-full mt-4 border-2 border-blue-600 text-blue-600 py-3 rounded-lg text-lg font-semibold hover:bg-blue-50 transition-colors flex items-center justify-center space-x-2 shadow-sm"
             >
               <User size={20} />

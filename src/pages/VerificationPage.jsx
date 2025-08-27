@@ -1,14 +1,25 @@
 import React from "react";
+import { useNavigate } from "react-router-dom"; // 导入 useNavigate
 
-// VerificationPage组件接收必要的props
 const VerificationPage = ({
   verificationEmail,
   setVerificationEmail,
   verificationCode,
   setVerificationCode,
-  handleVerification,
-  setShowVerification,
+  handleVerification, // App.jsx 传递下来的验证处理函数
+  setShowVerification, // 允许验证页面控制自身的显示状态
 }) => {
+  const navigate = useNavigate(); // 获取 navigate 函数
+
+  const onConfirmVerification = () => {
+    handleVerification(); // 调用 App.jsx 传递下来的验证处理函数
+  };
+
+  const onCancelVerification = () => {
+    setShowVerification(false); // 隐藏验证模态框
+    navigate("/signup"); // 如果用户取消，导航回注册页
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-lg w-full space-y-8">
@@ -70,13 +81,13 @@ const VerificationPage = ({
           </div>
           <div className="flex space-x-4 pt-4">
             <button
-              onClick={handleVerification}
+              onClick={onConfirmVerification}
               className="flex-1 bg-blue-600 text-white py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors shadow-md"
             >
               CONFIRM
             </button>
             <button
-              onClick={() => setShowVerification(false)} // 允许用户返回注册页
+              onClick={onCancelVerification} // 允许用户返回注册页
               className="flex-1 border-2 border-blue-600 text-blue-600 py-3 rounded-lg text-lg font-semibold hover:bg-blue-50 transition-colors shadow-sm"
             >
               CANCEL

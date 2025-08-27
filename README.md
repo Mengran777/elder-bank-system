@@ -65,9 +65,7 @@ Before starting the project, please ensure your development environment meets th
 ```
 \# In the project root directory
 
-cd elder-bank
-
-cd src # or the name of your frontend project folder
+cd elder-bank-system
 
 npm install
 
@@ -93,6 +91,7 @@ npm install
 
 Navigate to the server directory and run:
 
+```
 cd server
 
 npm run dev # Use nodemon for development, auto-restarts on file changes
@@ -101,13 +100,13 @@ npm run dev # Use nodemon for development, auto-restarts on file changes
 
 npm start # Just starts the server
 
+```
+
 You should see output similar to Server running in development mode on port 5000 and MongoDB Connected: &lt;your_mongodb_host&gt;.
 
 **2\. Start the Frontend Development Server**
 
-Navigate to the frontend project directory (e.g., elder-bank-frontend or client folder) and run:
-
-cd client # or the name of your frontend project folder
+Navigate to the project root directory (elder-bank-frontend) and run:
 
 npm run dev
 

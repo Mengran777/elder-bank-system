@@ -1,5 +1,5 @@
 import React from "react";
-import { X } from "lucide-react"; // 导入模态框关闭图标
+import { X } from "lucide-react"; // Import close icon for the modal
 
 const DeleteCardModal = ({
   show,
@@ -9,10 +9,9 @@ const DeleteCardModal = ({
   setDeleteCardId,
   deleteCardId,
 }) => {
-  if (!show) return null;
+  if (!show) return null; // Do not render if 'show' is false
 
-  // 找到待删除的卡片信息，以便在模态框中显示
-  // 使用 card._id 来查找卡片
+  // Find the card to be deleted based on deleteCardId for display
   const cardToDelete = cards.find((card) => card._id === deleteCardId);
 
   return (
@@ -31,14 +30,14 @@ const DeleteCardModal = ({
           <br />
           {cardToDelete ? (
             <span className="font-semibold">
-              Card ending in: {cardToDelete.number.slice(-4)}
+              Card ending in: {cardToDelete.cardId.slice(-4)}
             </span>
           ) : (
             "Please select a card to delete."
           )}
         </p>
 
-        {/* 选择要删除的卡片下拉框 */}
+        {/* Dropdown to select the card to delete */}
         <div className="mb-6">
           <label
             htmlFor="deleteCardSelect"
@@ -49,18 +48,15 @@ const DeleteCardModal = ({
           <select
             id="deleteCardSelect"
             className="w-full p-2 border border-gray-300 rounded-lg"
-            // 将 value={deleteCardId || ""} 中的 deleteCardId 转换为字符串，因为 select 的 value 始终是字符串
-            value={deleteCardId || ""}
-            // onChange 中将值转换为数字是错误的，因为 _id 是字符串。
-            // 应该直接传递字符串值给 setDeleteCardId。
-            onChange={(e) => setDeleteCardId(e.target.value)}
+            value={deleteCardId || ""} // Controlled component value
+            onChange={(e) => setDeleteCardId(e.target.value)} // Update deleteCardId state
           >
             <option value="">-- Select a card --</option>
             {cards.map((card) => (
               <option key={card._id} value={card._id}>
                 {" "}
-                {/* 使用 card._id 作为 key 和 value */}
-                Account {card.accountNumber} ({card.number}) - $
+                {/* Use _id as the value */}
+                Account {card.accountNumber} ({card.cardId.slice(-4)}) - £
                 {card.balance.toLocaleString()}
               </option>
             ))}
@@ -75,9 +71,8 @@ const DeleteCardModal = ({
             Cancel
           </button>
           <button
-            onClick={onConfirm}
-            // 只有当选中了卡片时才启用确认按钮
-            disabled={!deleteCardId}
+            onClick={onConfirm} // Call onConfirm function from App.jsx, which already passes deleteCardId
+            disabled={!deleteCardId} // Disable if no card is selected
             className={`px-6 py-2 bg-red-600 text-white rounded-lg transition-colors shadow-md ${
               !deleteCardId
                 ? "opacity-50 cursor-not-allowed"

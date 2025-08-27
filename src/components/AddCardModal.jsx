@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react"; // 导入 useEffect
 import { X } from "lucide-react"; // 导入模态框关闭图标
 
 const AddCardModal = ({ show, onClose, onConfirm, currentCardCount }) => {
@@ -13,6 +13,24 @@ const AddCardModal = ({ show, onClose, onConfirm, currentCardCount }) => {
     type: "debit", // 默认值
     expiresEnd: "",
   });
+
+  // ✨ 新增：在模态框显示时重置表单状态
+  useEffect(() => {
+    if (show) {
+      // 当模态框显示时
+      setNewCard({
+        // 将表单字段重置为初始空值
+        accountNumber: "",
+        cardId: "",
+        shortCode: "",
+        name: "",
+        openingBank: "",
+        pin: "",
+        type: "debit",
+        expiresEnd: "",
+      });
+    }
+  }, [show]); // 仅当 'show' prop 改变时运行此 effect
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -29,7 +47,7 @@ const AddCardModal = ({ show, onClose, onConfirm, currentCardCount }) => {
       return;
     }
     onConfirm(newCard); // 调用父组件的onConfirm方法，并传递新卡片数据
-    // 确认后清空表单
+    // 确认后清空表单（此逻辑已存在，但配合 useEffect 确保每次打开都是新的）
     setNewCard({
       accountNumber: "",
       cardId: "",

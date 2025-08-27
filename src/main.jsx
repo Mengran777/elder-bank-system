@@ -1,10 +1,15 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App.jsx"; // 确保导入App组件
-import "./index.css"; // 如果你有全局CSS文件，请导入
+import App from "./App.jsx";
+import "./index.css";
+import { BrowserRouter as Router } from "react-router-dom"; // 导入 BrowserRouter
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <App />
+    <Router>
+      {" "}
+      {/* 将 App 组件包裹在 Router 中 */}
+      <App />
+    </Router>
   </React.StrictMode>
 );

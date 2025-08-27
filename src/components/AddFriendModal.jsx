@@ -1,5 +1,5 @@
 import React from "react";
-import { X } from "lucide-react"; // 导入模态框关闭图标
+import { X } from "lucide-react"; // Import close icon for the modal
 
 const AddFriendModal = ({
   show,
@@ -8,7 +8,7 @@ const AddFriendModal = ({
   newFriend,
   setNewFriend,
 }) => {
-  if (!show) return null;
+  if (!show) return null; // Do not render if 'show' is false
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4">
@@ -36,7 +36,7 @@ const AddFriendModal = ({
               onChange={(e) =>
                 setNewFriend({ ...newFriend, name: e.target.value })
               }
-              placeholder="Enter friend's name (for your reference)"
+              placeholder="Enter friend's name"
             />
           </div>
           <div>
@@ -44,7 +44,7 @@ const AddFriendModal = ({
               htmlFor="friendAccount"
               className="block text-gray-800 font-semibold mb-2"
             >
-              Friend's Account ID:
+              Account Number:
             </label>
             <input
               type="text"
@@ -54,25 +54,7 @@ const AddFriendModal = ({
               onChange={(e) =>
                 setNewFriend({ ...newFriend, accountNumber: e.target.value })
               }
-              placeholder="Enter friend's unique Account ID (e.g., username)"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="friendShortCode"
-              className="block text-gray-800 font-semibold mb-2"
-            >
-              Friend's Short Code:
-            </label>
-            <input
-              type="text"
-              id="friendShortCode"
-              className="w-full p-2 border border-gray-300 rounded-lg"
-              value={newFriend.shortCode || ""}
-              onChange={(e) =>
-                setNewFriend({ ...newFriend, shortCode: e.target.value })
-              }
-              placeholder="Enter friend's bank short code"
+              placeholder="Enter friend's account number"
             />
           </div>
         </div>
@@ -84,16 +66,10 @@ const AddFriendModal = ({
             Cancel
           </button>
           <button
-            onClick={() => onConfirm(newFriend)}
-            disabled={
-              !newFriend.name ||
-              !newFriend.accountNumber ||
-              !newFriend.shortCode
-            }
+            onClick={() => onConfirm(newFriend)} // Call onConfirm and pass the newFriend data
+            disabled={!newFriend.name || !newFriend.accountNumber} // Disable if name or account number is empty
             className={`px-6 py-2 bg-blue-600 text-white rounded-lg transition-colors shadow-md ${
-              !newFriend.name ||
-              !newFriend.accountNumber ||
-              !newFriend.shortCode
+              !newFriend.name || !newFriend.accountNumber
                 ? "opacity-50 cursor-not-allowed"
                 : "hover:bg-blue-700"
             }`}

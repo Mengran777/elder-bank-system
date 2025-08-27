@@ -1,63 +1,19 @@
 import React from "react";
 import { Eye, EyeOff } from "lucide-react";
-import axios from "axios"; // Ensure axios is imported
-import API_BASE_URL from "../config"; // Path for src/pages/ -> src/config.js is ../config
+import { useNavigate } from "react-router-dom"; // 导入 useNavigate
 
 const SignupPage = ({
-  setCurrentPage,
   signupData,
   setSignupData,
   handleSignup,
   showPassword,
   setShowPassword,
 }) => {
-  const handleSignupSubmit = async () => {
-    // Frontend basic validation
-    if (
-      !signupData.accountName ||
-      !signupData.accountId ||
-      !signupData.password ||
-      !signupData.confirmPassword ||
-      !signupData.email ||
-      !signupData.phone
-    ) {
-      alert("Please fill in all required fields.");
-      return;
-    }
-    if (signupData.password.length < 10) {
-      alert("Password must be at least 10 characters long.");
-      return;
-    }
-    if (signupData.password !== signupData.confirmPassword) {
-      alert("Passwords do not match.");
-      return;
-    }
+  // 移除 setCurrentPage prop
+  const navigate = useNavigate(); // 获取 navigate 函数
 
-    try {
-      const response = await axios.post(`${API_BASE_URL}/auth/register`, {
-        accountName: signupData.accountName,
-        accountId: signupData.accountId,
-        password: signupData.password,
-        email: signupData.email,
-        phone: signupData.phone,
-      });
-
-      if (response.data) {
-        alert("Registration successful! Please log in.");
-        setCurrentPage("login");
-        console.log("Registration successful:", response.data);
-      }
-    } catch (error) {
-      console.error(
-        "Registration failed:",
-        error.response ? error.response.data : error.message
-      );
-      alert(
-        error.response && error.response.data.message
-          ? error.response.data.message
-          : "Registration failed. Please try again."
-      );
-    }
+  const handleSignupClick = () => {
+    handleSignup(); // 调用 App.jsx 传递下来的注册处理函数
   };
 
   return (
@@ -194,13 +150,13 @@ const SignupPage = ({
           </div>
           <div className="flex space-x-4 pt-4">
             <button
-              onClick={handleSignupSubmit}
+              onClick={handleSignupClick} // 调用处理函数
               className="flex-1 bg-blue-600 text-white py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors shadow-md"
             >
               CONFIRM
             </button>
             <button
-              onClick={() => setCurrentPage("login")}
+              onClick={() => navigate("/login")} // 使用 navigate 跳转到登录页
               className="flex-1 border-2 border-blue-600 text-blue-600 py-3 rounded-lg text-lg font-semibold hover:bg-blue-50 transition-colors shadow-sm"
             >
               CANCEL

@@ -1,9 +1,9 @@
 import React from "react";
-import { CreditCard, Plus, Trash2 } from "lucide-react"; // 导入账户页面所需的图标
+import { CreditCard, Plus, Trash2 } from "lucide-react";
 
 const AccountPage = ({
   cards,
-  transactions, // 接收已经过滤好的transactions
+  transactions, // 接收 App.jsx 传递过来的原始交易记录
   dateFilter,
   setDateFilter,
   typeFilter,
@@ -11,7 +11,32 @@ const AccountPage = ({
   setShowAddCard,
   setShowDeleteCard,
   setDeleteCardId,
+  fetchCards, // 传递获取函数，以便在卡片操作后刷新数据
+  fetchTransactions, // 传递获取函数，以便在交易筛选后刷新数据
 }) => {
+  // 过滤交易记录，这里直接根据传入的 props 进行过滤
+  const filteredTransactions = transactions.filter((transaction) => {
+    const transactionDate = new Date(transaction.createdAt); // 假设交易对象有 createdAt 字段
+    const now = new Date();
+    let dateMatch = true;
+
+    if (dateFilter === "7 days") {
+      dateMatch = transactionDate > new Date(now.setDate(now.getDate() - 7));
+    } else if (dateFilter === "1 month") {
+      dateMatch = transactionDate > new Date(now.setMonth(now.getMonth() - 1));
+    } else if (dateFilter === "1 year") {
+      dateMatch =
+        transactionDate > new Date(now.setFullYear(now.getFullYear() - 1));
+    }
+
+    const typeMatch =
+      typeFilter === "ALL" ||
+      (typeFilter === "Money-in" && transaction.amount > 0) ||
+      (typeFilter === "Money-out" && transaction.amount < 0);
+
+    return dateMatch && typeMatch;
+  });
+
   return (
     <div>
       <div className="mb-6">
@@ -44,10 +69,9 @@ const AccountPage = ({
           </div>
         </div>
 
-        {/* Cards Display */}
+        {/* 卡片显示 */}
         <div className="space-y-4 mb-8">
           {cards.length > 0 ? (
-            // 🌟 使用 card._id 作为 key，并显示 account Number
             cards.map((card) => (
               <div
                 key={card._id}
@@ -57,8 +81,7 @@ const AccountPage = ({
                   <CreditCard className="text-blue-600 mr-2" size={20} />
                   <span className="font-semibold text-blue-900">
                     Account {card.accountNumber}
-                  </span>{" "}
-                  {/* 显示 account number */}
+                  </span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-blue-600 text-white p-4 rounded-lg shadow-inner">
@@ -124,7 +147,7 @@ const AccountPage = ({
           )}
         </div>
 
-        {/* Transaction History */}
+        {/* 交易历史 */}
         <div className="mt-8">
           <h3 className="text-lg font-bold text-blue-900 mb-4">
             TRANSACTION HISTORY
@@ -205,26 +228,23 @@ const AccountPage = ({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {transactions.length > 0 ? (
-                  // 🌟 使用 transaction._id 作为 key，并调整日期和类型显示
-                  transactions.map((transaction) => (
+                {filteredTransactions.length > 0 ? (
+                  filteredTransactions.map((transaction) => (
                     <tr
                       key={transaction._id}
                       className="hover:bg-gray-50 transition-colors"
                     >
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {new Date(transaction.createdAt).toLocaleDateString()}
-                      </td>{" "}
-                      {/* 使用 createdAt 并格式化 */}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {transaction.description}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {transaction.type === "credit"
+                        {transaction.type === "credit" || transaction.amount > 0
                           ? "Money-in"
                           : "Money-out"}
-                      </td>{" "}
-                      {/* 根据 type 显示 */}
+                      </td>
                       <td
                         className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${
                           transaction.amount > 0

@@ -5,17 +5,15 @@ import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import cardRoutes from "./routes/cardRoutes.js";
 import transactionRoutes from "./routes/transactionRoutes.js";
-import friendRoutes from "./routes/friendRoutes.js"; // 导入朋友路由
 
-dotenv.config(); // Load environment variables
+dotenv.config();
 
-connectDB(); // Connect to the database
+connectDB();
 
 const app = express();
 
-// CORS Configuration (Allow frontend to access backend)
+// CORS 配置 (允许前端访问后端)
 app.use((req, res, next) => {
-  // In a production environment, replace 'http://localhost:5173' with your frontend's deployed domain
   res.header("Access-Control-Allow-Origin", "http://localhost:5173");
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.header(
@@ -26,19 +24,31 @@ app.use((req, res, next) => {
   next();
 });
 
-// Parse JSON request bodies
+// 解析 JSON 格式的请求体
 app.use(express.json());
 
-// Define API routes
+// 定义API路由
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/cards", cardRoutes);
 app.use("/api/transactions", transactionRoutes);
-app.use("/api/friends", friendRoutes); // 使用朋友路由
 
-// Basic root route
+// 基本根路由
 app.get("/", (req, res) => {
   res.send("API is running...");
+});
+
+// 🌟 新增：错误处理中间件
+// 这是一个 Express 错误处理中间件，它有四个参数 (err, req, res, next)
+app.use((err, req, res, next) => {
+  console.error(err.stack); // 在服务器控制台打印错误堆栈
+  const statusCode = res.statusCode === 200 ? 500 : res.statusCode; // 如果状态码是200，则改为500，否则保持原状
+  res.status(statusCode);
+  res.json({
+    message: err.message, // 发送错误消息给客户端
+    // 在开发模式下，可以发送完整的错误堆栈，在生产模式下则不建议
+    stack: process.env.NODE_ENV === "production" ? null : err.stack,
+  });
 });
 
 const PORT = process.env.PORT || 5000;

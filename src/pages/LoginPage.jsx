@@ -1,13 +1,41 @@
 import React from "react";
 import { User } from "lucide-react";
-import { useNavigate } from "react-router-dom"; // 导入 useNavigate
+import axios from "axios"; // 导入 axios
+import API_BASE_URL from "../config"; // 导入 API_BASE_URL
 
-const LoginPage = ({ loginData, setLoginData, handleLogin }) => {
-  // 移除 setCurrentPage prop
-  const navigate = useNavigate(); // 获取 navigate 函数
+// LoginPage组件接收 onLoginSuccess 作为 prop
+const LoginPage = ({
+  setCurrentPage,
+  loginData,
+  setLoginData,
+  onLoginSuccess,
+}) => {
+  // 处理登录提交逻辑，与后端进行交互
+  const handleLoginSubmit = async () => {
+    try {
+      // 向后端发送登录请求
+      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
+        accountId: loginData.account, // 后端期望的字段名通常是 accountId
+        password: loginData.password,
+      });
 
-  const handleLoginClick = () => {
-    handleLogin(); // 调用 App.jsx 传递下来的登录处理函数
+      // 如果登录成功，调用传入的 onLoginSuccess 回调函数
+      if (response.data && response.data.token) {
+        onLoginSuccess(response.data, response.data.token);
+        console.log("Login successful:", response.data);
+      }
+    } catch (error) {
+      // 处理登录失败的情况，并向用户显示错误信息
+      console.error(
+        "Login failed:",
+        error.response ? error.response.data : error.message
+      );
+      alert(
+        error.response && error.response.data.message
+          ? error.response.data.message
+          : "Login failed. Please check your credentials."
+      );
+    }
   };
 
   return (
@@ -21,10 +49,8 @@ const LoginPage = ({ loginData, setLoginData, handleLogin }) => {
             Or{" "}
             <span
               className="font-medium text-blue-600 hover:text-blue-500 cursor-pointer"
-              onClick={() => navigate("/signup")}
+              onClick={() => setCurrentPage("signup")}
             >
-              {" "}
-              {/* 使用 navigate 跳转到注册页 */}
               create a new account
             </span>
           </p>
@@ -40,7 +66,7 @@ const LoginPage = ({ loginData, setLoginData, handleLogin }) => {
               type="text"
               autoComplete="username"
               required
-              className="appearance-none rounded-md relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-lg"
+              className="appearance-none rounded-md relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-lg"
               placeholder="Account ID"
               value={loginData.account}
               onChange={(e) =>
@@ -58,7 +84,7 @@ const LoginPage = ({ loginData, setLoginData, handleLogin }) => {
               type="password"
               autoComplete="current-password"
               required
-              className="appearance-none rounded-md relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-lg"
+              className="appearance-none rounded-md relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-lg"
               placeholder="Password"
               value={loginData.password}
               onChange={(e) =>
@@ -70,7 +96,7 @@ const LoginPage = ({ loginData, setLoginData, handleLogin }) => {
           <div>
             <button
               type="submit"
-              onClick={handleLoginClick} // 调用处理函数
+              onClick={handleLoginSubmit} // 点击按钮时调用 handleLoginSubmit
               className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-lg font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-md"
             >
               <span className="absolute left-0 inset-y-0 flex items-center pl-3">
@@ -84,7 +110,7 @@ const LoginPage = ({ loginData, setLoginData, handleLogin }) => {
           </div>
           <div className="text-center">
             <button
-              onClick={() => navigate("/signup")} // 使用 navigate 跳转到注册页
+              onClick={() => setCurrentPage("signup")}
               className="w-full mt-4 border-2 border-blue-600 text-blue-600 py-3 rounded-lg text-lg font-semibold hover:bg-blue-50 transition-colors flex items-center justify-center space-x-2 shadow-sm"
             >
               <User size={20} />

@@ -1,25 +1,25 @@
-import React, { useState, useEffect } from "react"; // 导入 useEffect
-import { X } from "lucide-react"; // 导入模态框关闭图标
+import React, { useState, useEffect } from "react";
+import { X } from "lucide-react"; // Import the close icon for the modal
 
-const AddCardModal = ({ show, onClose, onConfirm, currentCardCount }) => {
-  // 模态框内部的状态，用于管理表单输入
+const AddCardModal = ({ show, onClose, onConfirm }) => {
+  // Internal state for the modal to manage form inputs
   const [newCard, setNewCard] = useState({
     accountNumber: "",
-    cardId: "",
+    cardId: "", // This will be the 16-digit card number sent to backend as 'number'
     shortCode: "",
-    name: "",
+    name: "", // Card Holder Name
     openingBank: "",
-    pin: "",
-    type: "debit", // 默认值
-    expiresEnd: "",
+    pin: "", // PIN for the card (should not be stored directly in backend without encryption)
+    type: "debit", // Default card type
+    expires: "", // Changed from expiresEnd to expires for consistency with backend model
   });
 
-  // ✨ 新增：在模态框显示时重置表单状态
+  // Effect hook to reset form state when the modal is shown
   useEffect(() => {
     if (show) {
-      // 当模态框显示时
+      // When the modal is shown
       setNewCard({
-        // 将表单字段重置为初始空值
+        // Reset form fields to initial empty values
         accountNumber: "",
         cardId: "",
         shortCode: "",
@@ -27,11 +27,12 @@ const AddCardModal = ({ show, onClose, onConfirm, currentCardCount }) => {
         openingBank: "",
         pin: "",
         type: "debit",
-        expiresEnd: "",
+        expires: "",
       });
     }
-  }, [show]); // 仅当 'show' prop 改变时运行此 effect
+  }, [show]); // Run this effect only when 'show' prop changes
 
+  // Handle changes in form inputs
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setNewCard((prevState) => ({
@@ -40,27 +41,39 @@ const AddCardModal = ({ show, onClose, onConfirm, currentCardCount }) => {
     }));
   };
 
+  // Handle confirmation of adding a new card
   const handleConfirm = () => {
-    // 简单的表单验证
-    if (Object.values(newCard).some((x) => x === "" || x === null)) {
+    // Simple form validation
+    if (
+      !newCard.accountNumber ||
+      !newCard.cardId ||
+      !newCard.shortCode ||
+      !newCard.name ||
+      !newCard.openingBank ||
+      !newCard.pin ||
+      !newCard.expires
+    ) {
       alert("Please fill in all the card details.");
       return;
     }
-    onConfirm(newCard); // 调用父组件的onConfirm方法，并传递新卡片数据
-    // 确认后清空表单（此逻辑已存在，但配合 useEffect 确保每次打开都是新的）
-    setNewCard({
-      accountNumber: "",
-      cardId: "",
-      shortCode: "",
-      name: "",
-      openingBank: "",
-      pin: "",
-      type: "debit",
-      expiresEnd: "",
-    });
+    // Card Number validation removed as per user request
+
+    // PIN validation format remains 3 digits
+    if (!/^\d{3}$/.test(newCard.pin)) {
+      alert("PIN must be 3 digits.");
+      return;
+    }
+    // Validate expiration date format MM/YY
+    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(newCard.expires)) {
+      alert("Expires End must be in MM/YY format (e.g., 01/25).");
+      return;
+    }
+
+    onConfirm(newCard); // Call the parent component's onConfirm method, passing the new card data
+    // The App.jsx's onConfirm (addCard) will handle closing the modal and refreshing data.
   };
 
-  if (!show) return null;
+  if (!show) return null; // Do not render if 'show' is false
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4">
@@ -73,7 +86,7 @@ const AddCardModal = ({ show, onClose, onConfirm, currentCardCount }) => {
         </button>
         <h3 className="text-xl font-bold text-blue-900 mb-4">Add New Card</h3>
         <p className="text-gray-700 mb-6">
-          Please finish information, it is very simple.
+          Please provide the following card information.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -92,6 +105,7 @@ const AddCardModal = ({ show, onClose, onConfirm, currentCardCount }) => {
                 className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={newCard.accountNumber}
                 onChange={handleInputChange}
+                placeholder="e.g., 12345678"
               />
             </div>
             <div>
@@ -108,6 +122,7 @@ const AddCardModal = ({ show, onClose, onConfirm, currentCardCount }) => {
                 className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={newCard.shortCode}
                 onChange={handleInputChange}
+                placeholder="e.g., 40-17-18"
               />
             </div>
             <div>
@@ -124,6 +139,7 @@ const AddCardModal = ({ show, onClose, onConfirm, currentCardCount }) => {
                 className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={newCard.openingBank}
                 onChange={handleInputChange}
+                placeholder="e.g., ELBC London"
               />
             </div>
             <div>
@@ -131,7 +147,7 @@ const AddCardModal = ({ show, onClose, onConfirm, currentCardCount }) => {
                 htmlFor="type"
                 className="block text-gray-800 font-semibold mb-2"
               >
-                Type:
+                Card Type:
               </label>
               <select
                 id="type"
@@ -152,7 +168,7 @@ const AddCardModal = ({ show, onClose, onConfirm, currentCardCount }) => {
                 htmlFor="cardId"
                 className="block text-gray-800 font-semibold mb-2"
               >
-                Card ID:
+                Card Number:
               </label>
               <input
                 type="text"
@@ -161,6 +177,8 @@ const AddCardModal = ({ show, onClose, onConfirm, currentCardCount }) => {
                 className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={newCard.cardId}
                 onChange={handleInputChange}
+                // maxLength removed as per user request
+                placeholder="e.g., 1234567890123456"
               />
             </div>
             <div>
@@ -168,7 +186,7 @@ const AddCardModal = ({ show, onClose, onConfirm, currentCardCount }) => {
                 htmlFor="name"
                 className="block text-gray-800 font-semibold mb-2"
               >
-                Name:
+                Card Holder Name:
               </label>
               <input
                 type="text"
@@ -177,6 +195,7 @@ const AddCardModal = ({ show, onClose, onConfirm, currentCardCount }) => {
                 className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={newCard.name}
                 onChange={handleInputChange}
+                placeholder="e.g.,  TAI"
               />
             </div>
             <div>
@@ -184,7 +203,7 @@ const AddCardModal = ({ show, onClose, onConfirm, currentCardCount }) => {
                 htmlFor="pin"
                 className="block text-gray-800 font-semibold mb-2"
               >
-                PIN:
+                PIN (3 digits):
               </label>
               <input
                 type="password"
@@ -193,23 +212,25 @@ const AddCardModal = ({ show, onClose, onConfirm, currentCardCount }) => {
                 className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={newCard.pin}
                 onChange={handleInputChange}
+                maxLength="3" // Restrict input length to 3
+                placeholder="e.g., 123"
               />
             </div>
             <div>
               <label
-                htmlFor="expiresEnd"
+                htmlFor="expires"
                 className="block text-gray-800 font-semibold mb-2"
               >
-                Expires End:
+                Expires End (MM/YY):
               </label>
               <input
-                type="text" // 方便用户输入 'MM/YY' 格式
-                id="expiresEnd"
-                name="expiresEnd"
+                type="text" // Facilitate 'MM/YY' input format
+                id="expires"
+                name="expires"
                 className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={newCard.expiresEnd}
+                value={newCard.expires}
                 onChange={handleInputChange}
-                placeholder="MM/YY"
+                placeholder="e.g., 12/25"
               />
             </div>
           </div>

@@ -1,9 +1,9 @@
-import React from "react";
-import { CreditCard, Plus, Trash2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { CreditCard, Plus, Trash2, XCircle } from "lucide-react"; // 导入 XCircle 图标
 
 const AccountPage = ({
   cards,
-  transactions, // 接收 App.jsx 传递过来的原始交易记录
+  transactions, // 接收 App.jsx 传递过来的原始交易记录 (现在应该是后端已过滤好的)
   dateFilter,
   setDateFilter,
   typeFilter,
@@ -11,31 +11,30 @@ const AccountPage = ({
   setShowAddCard,
   setShowDeleteCard,
   setDeleteCardId,
-  fetchCards, // 传递获取函数，以便在卡片操作后刷新数据
-  fetchTransactions, // 传递获取函数，以便在交易筛选后刷新数据
+  // fetchCards, // 传递获取函数，以便在卡片操作后刷新数据 (App.jsx 管理)
+  fetchTransactions, // 传递获取函数，以便在交易筛选后刷新数据 (由 App.jsx 传入并执行后端调用)
+  // ✨ 新增：用于按卡片筛选交易的状态和设置函数
+  selectedCardIdForTransactions,
+  setSelectedCardIdForTransactions,
 }) => {
-  // 过滤交易记录，这里直接根据传入的 props 进行过滤
-  const filteredTransactions = transactions.filter((transaction) => {
-    const transactionDate = new Date(transaction.createdAt); // 假设交易对象有 createdAt 字段
-    const now = new Date();
-    let dateMatch = true;
+  // 确保在组件内部，当筛选条件或卡片选择改变时，重新获取交易
+  // 这个 useEffect 负责触发 App.jsx 中的 fetchTransactions，将所有筛选参数传给后端
+  useEffect(() => {
+    fetchTransactions(selectedCardIdForTransactions);
+  }, [
+    dateFilter,
+    typeFilter,
+    selectedCardIdForTransactions,
+    fetchTransactions,
+  ]); // 确保 fetchTransactions 在依赖数组中
 
-    if (dateFilter === "7 days") {
-      dateMatch = transactionDate > new Date(now.setDate(now.getDate() - 7));
-    } else if (dateFilter === "1 month") {
-      dateMatch = transactionDate > new Date(now.setMonth(now.getMonth() - 1));
-    } else if (dateFilter === "1 year") {
-      dateMatch =
-        transactionDate > new Date(now.setFullYear(now.getFullYear() - 1));
-    }
+  // 清除卡片筛选
+  const handleClearCardFilter = () => {
+    setSelectedCardIdForTransactions(null); // 将卡片ID设置为null，表示不按卡片筛选
+  };
 
-    const typeMatch =
-      typeFilter === "ALL" ||
-      (typeFilter === "Money-in" && transaction.amount > 0) ||
-      (typeFilter === "Money-out" && transaction.amount < 0);
-
-    return dateMatch && typeMatch;
-  });
+  // ✨ 关键修正：移除本地的 filteredTransactions 变量和其过滤逻辑
+  //    transactions prop 应该已经是 App.jsx 通过后端 API 过滤后的最终结果。
 
   return (
     <div>
@@ -135,7 +134,10 @@ const AccountPage = ({
                     </div>
                   </div>
                 </div>
-                <button className="w-full mt-4 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md">
+                <button
+                  onClick={() => setSelectedCardIdForTransactions(card._id)} // ✨ 点击时设置选中的卡片ID
+                  className="w-full mt-4 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md"
+                >
                   Check Transaction
                 </button>
               </div>
@@ -149,9 +151,20 @@ const AccountPage = ({
 
         {/* 交易历史 */}
         <div className="mt-8">
-          <h3 className="text-lg font-bold text-blue-900 mb-4">
-            TRANSACTION HISTORY
-          </h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-bold text-blue-900">
+              TRANSACTION HISTORY
+            </h3>
+            {selectedCardIdForTransactions && ( // ✨ 只有当有卡片筛选时才显示清除按钮
+              <button
+                onClick={handleClearCardFilter}
+                className="bg-gray-200 text-gray-700 px-3 py-1 rounded-lg hover:bg-gray-300 transition-colors shadow-sm flex items-center space-x-1 text-sm"
+              >
+                <XCircle size={16} />
+                <span>Show All Transactions</span>
+              </button>
+            )}
+          </div>
           <p className="text-gray-600 mb-4">
             You can quickly search for it through the filtering function.
           </p>
@@ -228,8 +241,8 @@ const AccountPage = ({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredTransactions.length > 0 ? (
-                  filteredTransactions.map((transaction) => (
+                {transactions.length > 0 ? ( // ✨ 直接使用 transactions prop
+                  transactions.map((transaction) => (
                     <tr
                       key={transaction._id}
                       className="hover:bg-gray-50 transition-colors"
@@ -241,9 +254,8 @@ const AccountPage = ({
                         {transaction.description}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {transaction.type === "credit" || transaction.amount > 0
-                          ? "Money-in"
-                          : "Money-out"}
+                        {/* 根据 amount 判断类型，因为后端现在只返回 'debit'/'credit' */}
+                        {transaction.amount > 0 ? "Money-in" : "Money-out"}
                       </td>
                       <td
                         className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${

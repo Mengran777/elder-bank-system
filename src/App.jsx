@@ -34,7 +34,7 @@ function App() {
 
   const [cards, setCards] = useState([]);
   const [transactions, setTransactions] = useState([]);
-  const [friends, setFriends] = useState([]); // Friends data now fetched from backend
+  const [friends, setFriends] = useState([]);
 
   const [activeTab, setActiveTab] = useState("account");
   const [showVerification, setShowVerification] = useState(false);
@@ -47,6 +47,10 @@ function App() {
 
   const [dateFilter, setDateFilter] = useState("ALL");
   const [typeFilter, setTypeFilter] = useState("ALL");
+
+  // ✨ 新增状态：用于在 AccountPage 中按卡片筛选交易
+  const [selectedCardIdForTransactions, setSelectedCardIdForTransactions] =
+    useState(null);
 
   const [transferType, setTransferType] = useState("");
   const [selectedFromCard, setSelectedFromCard] = useState("");
@@ -94,8 +98,8 @@ function App() {
     setCurrentPage("main");
     setActiveTab("account");
     fetchCards();
-    fetchTransactions();
-    fetchFriends(); // Fetch friends after successful login
+    fetchTransactions(); // 登录成功后获取所有交易
+    fetchFriends();
   };
 
   const handleLogout = () => {
@@ -105,7 +109,8 @@ function App() {
     localStorage.removeItem("user");
     setCards([]);
     setTransactions([]);
-    setFriends([]); // Clear friends on logout
+    setFriends([]);
+    setSelectedCardIdForTransactions(null); // 登出时清除卡片筛选状态
     setCurrentPage("login");
   };
 
@@ -129,10 +134,15 @@ function App() {
     }
   };
 
-  const fetchTransactions = async () => {
+  // ✨ 修改：fetchTransactions 现在接受一个可选的 cardId 参数
+  const fetchTransactions = async (cardId = null) => {
     if (!token) return;
     try {
       const params = { dateFilter, typeFilter };
+      if (cardId) {
+        // 如果传入了 cardId，则添加到查询参数中
+        params.cardId = cardId;
+      }
       const { data } = await axios.get(`${API_BASE_URL}/transactions`, {
         ...getAuthHeaders(),
         params,
@@ -149,7 +159,6 @@ function App() {
     }
   };
 
-  // Fetch friends list from backend
   const fetchFriends = async () => {
     if (!token) return;
     try {
@@ -169,20 +178,18 @@ function App() {
     }
   };
 
-  // Add a new card (calls backend API)
   const addCard = async (newCardData) => {
     if (!token) return;
     try {
-      // payload will be newCardData directly as fields are now unified
       const { data } = await axios.post(
         `${API_BASE_URL}/cards`,
         newCardData,
         getAuthHeaders()
       );
-      setCards([...cards, data]); // Add new card to state
+      setCards([...cards, data]);
       setShowAddCard(false);
       alert("Card added successfully!");
-      fetchCards(); // Refresh cards list to get latest data
+      fetchCards();
     } catch (error) {
       console.error(
         "Error adding card:",
@@ -197,16 +204,16 @@ function App() {
     }
   };
 
-  // Delete a card (calls backend API)
   const deleteCard = async (cardId) => {
     if (!token) return;
     try {
       await axios.delete(`${API_BASE_URL}/cards/${cardId}`, getAuthHeaders());
-      setCards(cards.filter((card) => card._id !== cardId)); // Filter out deleted card
+      setCards(cards.filter((card) => card._id !== cardId));
       setShowDeleteCard(false);
       setDeleteCardId(null);
       alert("Card deleted successfully!");
-      fetchCards(); // Refresh cards list to get latest data
+      fetchCards();
+      fetchTransactions(); // 卡片删除后刷新交易记录
     } catch (error) {
       console.error(
         "Error deleting card:",
@@ -221,17 +228,23 @@ function App() {
     }
   };
 
-  // Add friend (calls backend API)
   const addFriend = async (friendData) => {
     if (!token) return;
     try {
+      const payload = {
+        friendIdentifier: friendData.accountNumber,
+        name: friendData.name,
+        shortCode: friendData.shortCode,
+      };
+      const config = getAuthHeaders();
       const { data } = await axios.post(
         `${API_BASE_URL}/friends`,
-        friendData,
-        getAuthHeaders()
+        payload,
+        config
       );
-      fetchFriends(); // Refresh friends list after adding
-      setNewFriend({ name: "", accountNumber: "", shortCode: "" }); // Clear form
+
+      fetchFriends();
+      setNewFriend({ name: "", accountNumber: "", shortCode: "" });
       setShowAddFriend(false);
       alert(data.message);
     } catch (error) {
@@ -249,15 +262,16 @@ function App() {
   };
 
   // Effect hook: Fetch data on component load or token/currentPage/filter changes
+  // ✨ 修改：useEffect 现在监听 dateFilter, typeFilter, selectedCardIdForTransactions
   useEffect(() => {
     if (token && currentPage === "main") {
       fetchCards();
-      fetchTransactions();
-      fetchFriends(); // Fetch friends data when main page is active
+      // 在这里不再直接调用 fetchTransactions，因为它的调用现在由 AccountPage 内部的 useEffect 管理
+      fetchFriends();
     }
-  }, [token, currentPage, dateFilter, typeFilter]);
+  }, [token, currentPage]); // dateFilter, typeFilter, selectedCardIdForTransactions 放在 AccountPage 的 useEffect 中
 
-  // Generate random password (used in SettingsPage)
+  // Generate random password
   const generateRandomPassword = () => {
     const chars =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -268,7 +282,7 @@ function App() {
     return password;
   };
 
-  // Send chat message (simulated auto-reply)
+  // Send chat message
   const sendChatMessage = () => {
     if (chatInput.trim()) {
       const newMessages = [
@@ -343,34 +357,7 @@ function App() {
         {activeTab === "account" && (
           <AccountPage
             cards={cards}
-            transactions={transactions.filter((transaction) => {
-              const transactionDate = new Date(
-                transaction.createdAt || transaction.date
-              ); // Use createdAt from backend, fallback to date
-              const now = new Date();
-              let dateMatch = true;
-
-              if (dateFilter === "7 days") {
-                const sevenDaysAgo = new Date();
-                sevenDaysAgo.setDate(now.getDate() - 7);
-                dateMatch = transactionDate >= sevenDaysAgo;
-              } else if (dateFilter === "1 month") {
-                const oneMonthAgo = new Date();
-                oneMonthAgo.setMonth(now.getMonth() - 1);
-                dateMatch = transactionDate >= oneMonthAgo;
-              } else if (dateFilter === "1 year") {
-                const oneYearAgo = new Date();
-                oneYearAgo.setFullYear(now.getFullYear() - 1);
-                dateMatch = transactionDate >= oneYearAgo;
-              }
-
-              const typeMatch =
-                typeFilter === "ALL" ||
-                (typeFilter === "Money-in" && transaction.amount > 0) ||
-                (typeFilter === "Money-out" && transaction.amount < 0);
-
-              return dateMatch && typeMatch;
-            })} // Filter transactions
+            transactions={transactions} // 将原始交易记录传递给 AccountPage
             dateFilter={dateFilter}
             setDateFilter={setDateFilter}
             typeFilter={typeFilter}
@@ -378,8 +365,11 @@ function App() {
             setShowAddCard={setShowAddCard}
             setShowDeleteCard={setShowDeleteCard}
             setDeleteCardId={setDeleteCardId}
-            fetchCards={fetchCards} // Pass fetch function so AccountPage can trigger refresh
-            fetchTransactions={fetchTransactions} // Pass fetch function
+            fetchCards={fetchCards}
+            fetchTransactions={fetchTransactions} // 传递 fetchTransactions 函数
+            // ✨ 传递新的状态和设置函数给 AccountPage
+            selectedCardIdForTransactions={selectedCardIdForTransactions}
+            setSelectedCardIdForTransactions={setSelectedCardIdForTransactions}
           />
         )}
 
@@ -389,7 +379,7 @@ function App() {
             setTransferType={setTransferType}
             cards={cards}
             friends={friends}
-            setFriends={setFriends} // Keeping for now, might be needed if TransferPage manages friend state directly for some reason
+            setFriends={setFriends}
             selectedFromCard={selectedFromCard}
             setSelectedFromCard={setSelectedFromCard}
             selectedToCard={selectedToCard}
@@ -407,9 +397,9 @@ function App() {
             newFriend={newFriend}
             setNewFriend={setNewFriend}
             addFriend={addFriend}
-            fetchCards={fetchCards} // Pass fetch functions to TransferPage
+            fetchCards={fetchCards}
             fetchTransactions={fetchTransactions}
-            fetchFriends={fetchFriends} // Pass fetchFriends to TransferPage
+            fetchFriends={fetchFriends}
           />
         )}
 
@@ -423,7 +413,7 @@ function App() {
           />
         )}
       </div>
-      {/* Modals rendered here */}
+      {/* Modals are rendered here */}
       <AddCardModal
         show={showAddCard}
         onClose={() => setShowAddCard(false)}

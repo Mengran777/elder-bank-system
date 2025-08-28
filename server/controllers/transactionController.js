@@ -1,7 +1,6 @@
 import Transaction from "../models/Transaction.js";
 import Card from "../models/Card.js";
-import User from "../models/User.js";
-import mongoose from "mongoose"; // 导入 mongoose 用于事务
+import User from "../models/User.js"; // 导入 User 模型以便查找收款人
 
 // @desc    获取用户所有交易记录 (现在支持按卡片ID筛选)
 // @route   GET /api/transactions
@@ -15,17 +14,7 @@ const getTransactions = async (req, res) => {
     query.card = req.query.cardId;
   }
 
-  // 示例筛选逻辑 (与前端AccountPage的筛选逻辑对应)
-  if (req.query.type && req.query.type !== "ALL") {
-    if (req.query.type === "Money-in") {
-      query.amount = { $gt: 0 };
-    } else if (req.query.type === "Money-out") {
-      query.amount = { $lt: 0 };
-    } else {
-      // 如果 typeFilter 是 'credit' 或 'debit'
-      query.type = req.query.type;
-    }
-  }
+  // 根据日期筛选
   if (req.query.dateFilter && req.query.dateFilter !== "ALL") {
     const now = new Date();
     let startDate;
@@ -41,10 +30,18 @@ const getTransactions = async (req, res) => {
     }
   }
 
+  // 根据类型筛选 (Money-in/Money-out)
+  if (req.query.typeFilter && req.query.typeFilter !== "ALL") {
+    if (req.query.typeFilter === "Money-in") {
+      query.amount = { $gt: 0 };
+    } else if (req.query.typeFilter === "Money-out") {
+      query.amount = { $lt: 0 };
+    }
+  }
+
   const transactions = await Transaction.find(query)
     .sort({ createdAt: -1 })
     .populate("card", "number type"); // 关联查询卡片信息，只返回卡号和类型
-
   res.json(transactions);
 };
 
@@ -59,7 +56,7 @@ const createTransfer = async (req, res) => {
     selectedToCardId, // 'self' 转账用到
     selectedFriendId, // 'friends' 转账用到
     strangerAccount, // 'others' 转账用到
-    recipientShortCode, // 'friends' 和 'others' 转账用到
+    recipientShortCode, // 'others' 转账用到，'friends' 类型由后端获取
   } = req.body;
 
   // 1. 查找转出卡
@@ -80,7 +77,7 @@ const createTransfer = async (req, res) => {
   let toCard = null;
   let recipientUser = null;
   let recipientAccNum = "";
-  let recipientSC = "";
+  let recipientSC = ""; // ✨ 初始化收款方 Short Code
   let descriptionForDebit = "";
   let descriptionForCredit = "";
 
@@ -100,50 +97,52 @@ const createTransfer = async (req, res) => {
       return;
     }
     recipientAccNum = toCard.accountNumber;
-    recipientSC = toCard.shortCode;
+    recipientSC = toCard.shortCode; // ✨ 从转入卡获取 shortCode
     recipientUser = toCard.user; // 收款方是当前用户
     descriptionForDebit = `Transfer to own account ${toCard.accountNumber}`;
     descriptionForCredit = `Transfer from own account ${fromCard.accountNumber}`;
   } else if (transferType === "friends") {
-    // 3. 如果是转账给朋友 (这里我们假设朋友只是一个本地列表，或者将来有Friends模型)
-    // 暂时我们没有朋友的Card ID，所以这里无法更新朋友的余额，只能记录交易
-    // 假设 selectedFriendId 是朋友的 _id，并且你可以从 friends 列表/数据库中找到其 accountNumber 和 shortCode
+    // 3. 如果是转账给朋友
     const friend = await User.findById(selectedFriendId); // 假设朋友也是注册用户
     if (!friend) {
       res.status(404).json({ message: "Friend not found" });
       return;
     }
-    // 查找朋友的默认卡片 (这里简化，实际需要更复杂的逻辑)
-    toCard = await Card.findOne({ user: friend._id });
+    // 查找朋友的默认卡片以获取其 Short Code 和 Account Number
+    toCard = await Card.findOne({ user: friend._id }); // 假设朋友有一张默认卡片
+
+    if (!toCard) {
+      // 如果朋友没有卡片，则无法进行基于卡片的转账
+      res.status(400).json({
+        message: `Friend ${friend.accountName} does not have an active card to receive funds.`,
+      });
+      return;
+    }
 
     recipientUser = friend._id;
-    recipientAccNum = friend.accountId; // 假设朋友的accountId就是其收款账号
-    recipientSC = recipientShortCode; // 从前端传入
-    descriptionForDebit = `Transfer to friend ${friend.accountName} (${friend.accountId})`;
-    descriptionForCredit = `Transfer from ${req.user.accountName} (${fromCard.accountNumber}) (via friend transfer)`; // 朋友收到的描述
+    recipientAccNum = toCard.accountNumber; // ✨ 使用朋友卡片的 accountNumber 作为收款账号
+    recipientSC = toCard.shortCode; // ✨ 从朋友卡片获取 shortCode
+    descriptionForDebit = `Transfer to friend ${friend.accountName} (${toCard.accountNumber})`;
+    descriptionForCredit = `Transfer from ${req.user.accountName} (to friend ${friend.accountName})`; // 朋友收到的描述
   } else if (transferType === "others") {
     // 4. 如果是转账给他人 (外部账户)
     if (!strangerAccount || !recipientShortCode) {
-      res
-        .status(400)
-        .json({
-          message:
-            "Recipient account number and short code are required for external transfer",
-        });
+      res.status(400).json({
+        message:
+          "Recipient account number and short code are required for external transfer",
+      });
       return;
     }
     recipientAccNum = strangerAccount;
-    recipientSC = recipientShortCode;
-    // 外部转账没有 recipientUser 或 recipientCard
+    recipientSC = recipientShortCode; // ✨ 从前端传入 (对于外部转账是必填项)
     descriptionForDebit = `Transfer to external account ${strangerAccount} (${recipientShortCode})`;
-    descriptionForCredit = `Transfer from ${req.user.accountName} (${fromCard.accountNumber}) (via external transfer)`; // 外部账户收到的描述 (这里不会真的创建外部记录)
+    descriptionForCredit = `External transfer received from ${req.user.accountName} (${fromCard.accountNumber})`; // 外部账户收到的描述 (这里不会真的创建外部记录)
   } else {
     res.status(400).json({ message: "Invalid transfer type" });
     return;
   }
 
-  // 开始数据库操作 (使用事务确保原子性，但Mongoose的事务需要在副本集上)
-  // 简化：直接执行更新和创建，如果失败，可能需要手动回滚或重试机制
+  // 开始数据库操作
   try {
     // 扣除转出方卡片余额
     fromCard.balance -= transferAmount;
@@ -160,7 +159,7 @@ const createTransfer = async (req, res) => {
       user: req.user._id,
       card: fromCard._id,
       type: "debit",
-      amount: -transferAmount, // 关键修改：转出金额存储为负数
+      amount: -transferAmount, // 转出金额存储为负数
       description: descriptionForDebit,
       senderAccount: fromCard.accountNumber,
       senderShortCode: fromCard.shortCode,
@@ -177,7 +176,7 @@ const createTransfer = async (req, res) => {
         user: recipientUser, // 收款方用户ID
         card: toCard ? toCard._id : undefined, // 收款方卡片ID
         type: "credit",
-        amount: transferAmount, // 关键修改：入账金额存储为正数
+        amount: transferAmount, // 入账金额存储为正数
         description: descriptionForCredit,
         senderAccount: fromCard.accountNumber, // 转出方信息
         senderShortCode: fromCard.shortCode,
@@ -196,12 +195,10 @@ const createTransfer = async (req, res) => {
     });
   } catch (error) {
     console.error("Transfer failed:", error);
-    res
-      .status(500)
-      .json({
-        message: "Transfer failed due to server error",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Transfer failed due to server error",
+      error: error.message,
+    });
   }
 };
 

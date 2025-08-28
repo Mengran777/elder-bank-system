@@ -1,21 +1,17 @@
 import express from "express";
-import {
-  getFriends,
-  addFriend,
-  deleteFriend,
-} from "../controllers/friendController.js"; // 导入 deleteFriend
+import { addFriend, getFriends } from "../controllers/friendController.js"; // ✨ 修正：移除 deleteFriend 的导入
 import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// 所有朋友相关的路由都受保护
-router
-  .route("/")
-  .get(protect, getFriends) // 获取用户所有朋友列表
-  .post(protect, addFriend); // 添加新朋友
+// Route to add a new friend
+router.post("/", protect, addFriend);
 
-router
-  .route("/:id") // 针对特定朋友 ID 的路由
-  .delete(protect, deleteFriend); // 删除朋友
+// Route to get current user's friends list
+router.get("/", protect, getFriends);
+
+// 如果您打算未来实现删除朋友的功能，您需要在 friendController.js 中定义 deleteFriend 函数，
+// 然后在这里导入并添加相应的路由，例如：
+// router.delete('/:id', protect, deleteFriend);
 
 export default router;

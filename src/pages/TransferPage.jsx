@@ -1,14 +1,14 @@
 import React from "react";
 import { CreditCard, Users, User, ArrowLeftRight } from "lucide-react";
 import axios from "axios";
-import API_BASE_URL from "../config"; // Ensure API_BASE_URL is imported
+import API_BASE_URL from "../config";
 
 const TransferPage = ({
   transferType,
   setTransferType,
   cards,
   friends,
-  // setFriends, // Keeping for now, might be needed if TransferPage manages friend state directly for some reason
+  setFriends,
   selectedFromCard,
   setSelectedFromCard,
   selectedToCard,
@@ -28,22 +28,20 @@ const TransferPage = ({
   addFriend,
   fetchCards,
   fetchTransactions,
-  fetchFriends, // Ensure fetchFriends function is received
 }) => {
   const handleTransfer = async () => {
-    if (!selectedFromCard || !transferAmount) {
-      alert("Please select a 'From Account' and enter an amount.");
+    // 基础验证
+    if (!selectedFromCard) {
+      alert("Please select a 'From Account'.");
       return;
     }
 
-    // Convert to number
     const amount = parseFloat(transferAmount);
     if (isNaN(amount) || amount <= 0) {
       alert("Please enter a valid transfer amount.");
       return;
     }
 
-    // Find source card to get its details
     const fromCardDetails = cards.find((card) => card._id === selectedFromCard);
     if (!fromCardDetails || fromCardDetails.balance < amount) {
       alert("Insufficient balance or invalid 'From Account'.");
@@ -52,36 +50,47 @@ const TransferPage = ({
 
     let payload = {
       fromCardId: selectedFromCard,
-      amount: amount, // Backend expects `amount` not `transferAmount`
+      transferAmount: amount,
       transferType: transferType,
     };
+
+    // ✨ 新增调试日志：检查前端发送的卡片ID
+    console.log("Transfer Request Payload before sending:", {
+      fromCardId: selectedFromCard,
+      selectedToCardId: selectedToCard, // for self-transfer
+      selectedFriendId: selectedFriend, // for friends-transfer
+      strangerAccount: strangerAccount, // for others-transfer
+      recipientShortCode: recipientShortCode, // for others-transfer
+      amount: amount,
+      transferType: transferType,
+    });
 
     if (transferType === "self") {
       if (!selectedToCard) {
         alert("Please select a 'To Account'.");
         return;
       }
-      payload.toCardId = selectedToCard; // Backend expects `toCardId`
+      // ✨ 修正：前端验证确保不能转账到同一张卡
+      if (selectedFromCard === selectedToCard) {
+        alert(
+          "Cannot transfer to the same card. Please select a different 'To Account'."
+        );
+        return;
+      }
+      payload.selectedToCardId = selectedToCard;
     } else if (transferType === "friends") {
       if (!selectedFriend) {
         alert("Please select a friend.");
         return;
       }
-      const friendDetails = friends.find((f) => f._id === selectedFriend);
-      if (!friendDetails) {
-        alert("Selected friend details not found.");
-        return;
-      }
-      payload.recipientAccount = friendDetails.accountNumber; // Pass friend's account number
-      payload.recipientName = friendDetails.name; // Pass friend's name
-      payload.recipientShortCode = friendDetails.shortCode; // Pass friend's shortCode
+      payload.selectedFriendId = selectedFriend;
     } else if (transferType === "others") {
       if (!strangerAccount || !recipientShortCode) {
         alert("Please enter recipient's account number and short code.");
         return;
       }
-      payload.recipientAccount = strangerAccount; // Pass stranger's account number
-      payload.recipientShortCode = recipientShortCode; // Pass stranger's shortCode
+      payload.strangerAccount = strangerAccount;
+      payload.recipientShortCode = recipientShortCode;
     } else {
       alert("Please select a transfer type.");
       return;
@@ -104,9 +113,9 @@ const TransferPage = ({
 
       alert(response.data.message);
 
+      // Refresh cards and transactions after successful transfer
       fetchCards();
       fetchTransactions();
-      fetchFriends(); // Refresh friends list after transfer (if friend balance could change, or just to be safe)
 
       // Reset transfer form
       setSelectedFromCard("");
@@ -148,7 +157,8 @@ const TransferPage = ({
             onClick={() => {
               setTransferType("self");
               setRecipientShortCode("");
-            }}
+              setSelectedToCard("");
+            }} // ✨ 重置 selectedToCard
             className={`w-full p-4 rounded-lg border-2 text-left flex items-center space-x-3 transition-colors shadow-sm ${
               transferType === "self"
                 ? "border-blue-600 bg-blue-50"
@@ -163,7 +173,8 @@ const TransferPage = ({
             onClick={() => {
               setTransferType("friends");
               setRecipientShortCode("");
-            }}
+              setSelectedFriend("");
+            }} // ✨ 重置 selectedFriend
             className={`w-full p-4 rounded-lg border-2 text-left flex items-center space-x-3 transition-colors shadow-sm ${
               transferType === "friends"
                 ? "border-blue-600 bg-blue-50"
@@ -178,7 +189,8 @@ const TransferPage = ({
             onClick={() => {
               setTransferType("others");
               setRecipientShortCode("");
-            }}
+              setStrangerAccount("");
+            }} // ✨ 重置 strangerAccount
             className={`w-full p-4 rounded-lg border-2 text-left flex items-center space-x-3 transition-colors shadow-sm ${
               transferType === "others"
                 ? "border-blue-600 bg-blue-50"
@@ -225,6 +237,7 @@ const TransferPage = ({
                   onChange={(e) => setSelectedToCard(e.target.value)}
                 >
                   <option value="">Select card</option>
+                  {/* ✨ 过滤掉已选择的 From Account，防止转给自己 */}
                   {cards
                     .filter((card) => card._id !== selectedFromCard)
                     .map((card) => (
@@ -302,8 +315,7 @@ const TransferPage = ({
                   <option value="">Select friend</option>
                   {friends.map((friend) => (
                     <option key={friend._id} value={friend._id}>
-                      {friend.name} - {friend.accountNumber} ({friend.shortCode}
-                      ) {/* Display shortCode */}
+                      {friend.name} - {friend.accountNumber}
                     </option>
                   ))}
                 </select>

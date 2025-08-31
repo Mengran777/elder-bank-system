@@ -1,7 +1,7 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 
-// @desc    获取用户资料
+// @desc    Get user profile
 // @route   GET /api/users/profile
 // @access  Private
 const getUserProfile = async (req, res) => {
@@ -20,7 +20,7 @@ const getUserProfile = async (req, res) => {
   }
 };
 
-// @desc    更新用户密码
+// @desc    Update user password
 // @route   PUT /api/users/profile/password
 // @access  Private
 const updateUserPassword = async (req, res) => {
@@ -32,13 +32,13 @@ const updateUserPassword = async (req, res) => {
     return;
   }
 
-  // 1. 验证当前密码是否正确
+  // Verify current password
   if (!(await user.matchPassword(currentPassword))) {
     res.status(401).json({ message: "Current password is incorrect" });
     return;
   }
 
-  // 2. 验证新密码是否符合要求
+  // Validate new password
   if (newPassword.length < 10) {
     res
       .status(400)
@@ -50,25 +50,17 @@ const updateUserPassword = async (req, res) => {
     return;
   }
   if (currentPassword === newPassword) {
-    res
-      .status(400)
-      .json({
-        message: "New password cannot be the same as the current password",
-      });
+    res.status(400).json({
+      message: "New password cannot be the same as the current password",
+    });
     return;
   }
 
-  // 关键：将明文新密码赋值给 user.password
+  // Assign plain new password to trigger hashing in pre('save') middleware
   user.password = newPassword;
 
-  // ✨ 新增调试日志：在保存前检查 password 字段是否被 Mongoose 标记为修改
-  console.log(
-    'Controller: user.isModified("password") before save:',
-    user.isModified("password")
-  );
-
   try {
-    // 3. 保存用户，这将触发 pre('save') 钩子来哈希密码
+    // Save user, pre('save') hook will hash the password
     await user.save();
     res.json({ message: "Password updated successfully" });
   } catch (error) {

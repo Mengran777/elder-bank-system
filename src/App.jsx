@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+// 导入 useNavigate
+import { useNavigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import VerificationPage from "./pages/VerificationPage";
@@ -16,6 +18,8 @@ import axios from "axios";
 import API_BASE_URL from "./config";
 
 function App() {
+  const navigate = useNavigate();
+
   // --- Global State Management ---
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem("userToken") || null);
@@ -112,6 +116,46 @@ function App() {
     setFriends([]);
     setSelectedCardIdForTransactions(null); // 登出时清除卡片筛选状态
     setCurrentPage("login");
+  };
+
+  // --- 新增: 处理注册逻辑的函数 ---
+  const handleSignup = async (signupData) => {
+    console.log("Sending signup data:", signupData);
+    if (signupData.password !== signupData.confirmPassword) {
+      alert("Passwords do not match!");
+      return;
+    }
+    if (signupData.password.length < 10) {
+      alert("Password must be at least 10 characters long.");
+      return;
+    }
+
+    try {
+      const payload = {
+        accountName: signupData.accountName,
+        accountId: signupData.accountId,
+        password: signupData.password,
+        email: signupData.email,
+        phone: signupData.phone,
+      };
+      // 向后端发送注册请求
+      await axios.post(`${API_BASE_URL}/auth/signup`, payload);
+      alert(
+        "Signup successful! Please check your email for a verification code."
+      );
+      setShowVerification(true); // 显示验证页面
+      setVerificationEmail(signupData.email); // 设置验证邮件
+    } catch (error) {
+      console.error(
+        "Signup failed:",
+        error.response ? error.response.data : error.message
+      );
+      alert(
+        error.response && error.response.data.message
+          ? error.response.data.message
+          : "Signup failed. Please try again."
+      );
+    }
   };
 
   // --- Backend data fetching functions ---
@@ -319,6 +363,8 @@ function App() {
         setSignupData={setSignupData}
         showPassword={showPassword}
         setShowPassword={setShowPassword}
+        // ✨ 将新的 handleSignup 函数作为 prop 传递
+        handleSignup={handleSignup}
       />
     );
   }

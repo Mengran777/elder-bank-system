@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { useNavigate } from "react-router-dom"; // 导入 useNavigate
+import { useNavigate } from "react-router-dom";
 
 const SignupPage = ({
   signupData,
@@ -9,11 +9,27 @@ const SignupPage = ({
   showPassword,
   setShowPassword,
 }) => {
-  // 移除 setCurrentPage prop
-  const navigate = useNavigate(); // 获取 navigate 函数
+  const navigate = useNavigate();
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const handleSignupClick = () => {
-    handleSignup(); // 调用 App.jsx 传递下来的注册处理函数
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    // 客户端验证：检查 accountName 是否为空
+    if (!signupData.accountName || signupData.accountName.trim() === "") {
+      setErrorMessage("Account name is required.");
+      return;
+    }
+
+    // 客户端验证：检查密码是否一致
+    if (signupData.password !== signupData.confirmPassword) {
+      setErrorMessage("Passwords do not match.");
+      return;
+    }
+
+    // 重置错误信息并提交
+    setErrorMessage("");
+    handleSignup(signupData);
   };
 
   return (
@@ -27,7 +43,18 @@ const SignupPage = ({
             Please complete all your information.
           </p>
         </div>
-        <div className="bg-white rounded-lg shadow-lg p-8 border-2 border-gray-200 space-y-6">
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white rounded-lg shadow-lg p-8 border-2 border-gray-200 space-y-6"
+        >
+          {errorMessage && (
+            <div
+              className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative"
+              role="alert"
+            >
+              <span className="block sm:inline">{errorMessage}</span>
+            </div>
+          )}
           <div>
             <label
               htmlFor="accountName"
@@ -44,6 +71,7 @@ const SignupPage = ({
               onChange={(e) =>
                 setSignupData({ ...signupData, accountName: e.target.value })
               }
+              required
             />
           </div>
           <div>
@@ -62,6 +90,7 @@ const SignupPage = ({
               onChange={(e) =>
                 setSignupData({ ...signupData, accountId: e.target.value })
               }
+              required
             />
           </div>
           <div>
@@ -81,6 +110,7 @@ const SignupPage = ({
                 onChange={(e) =>
                   setSignupData({ ...signupData, password: e.target.value })
                 }
+                required
               />
               <button
                 type="button"
@@ -110,6 +140,7 @@ const SignupPage = ({
                   confirmPassword: e.target.value,
                 })
               }
+              required
             />
           </div>
           <div>
@@ -128,6 +159,7 @@ const SignupPage = ({
               onChange={(e) =>
                 setSignupData({ ...signupData, email: e.target.value })
               }
+              required
             />
           </div>
           <div>
@@ -150,19 +182,20 @@ const SignupPage = ({
           </div>
           <div className="flex space-x-4 pt-4">
             <button
-              onClick={handleSignupClick} // 调用处理函数
+              type="submit"
               className="flex-1 bg-blue-600 text-white py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors shadow-md"
             >
               CONFIRM
             </button>
             <button
-              onClick={() => navigate("/login")} // 使用 navigate 跳转到登录页
+              type="button"
+              onClick={() => navigate("/login")}
               className="flex-1 border-2 border-blue-600 text-blue-600 py-3 rounded-lg text-lg font-semibold hover:bg-blue-50 transition-colors shadow-sm"
             >
               CANCEL
             </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );
